@@ -12,7 +12,8 @@ import { useFinance } from '../data/store';
 import { useAuth } from '../auth/AuthContext';
 import { validateAmount } from '../lib/validation';
 import { useToast } from '../components/ui';
-import { IconCheck, IconShield, IconWallet } from '../components/ui/icons';
+import { Wordmark } from '../components/ui/Brand';
+import { IconCheck, IconWallet } from '../components/ui/icons';
 
 export function Setup() {
   const { completeSetup, mode } = useFinance();
@@ -46,23 +47,15 @@ export function Setup() {
   return (
     <div className="setup">
       <div className="setup-card">
-        <div className="sidebar-brand" style={{ padding: 0, marginBottom: 22 }}>
-          <div className="brand-mark">M</div>
-          <div>
-            <div className="brand-word">MONSSIF MONEY OS</div>
-            <div className="brand-sub">
-              {isCloud ? (
-                <>
-                  <IconShield size={9} /> {user?.email || 'Supabase account'}
-                </>
-              ) : (
-                'Local demo · browser only'
-              )}
-            </div>
-          </div>
+        <div style={{ marginBottom: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <Wordmark />
+          <span className={`mode-chip${isCloud ? ' live' : ''}`}>
+            <span className="mode-dot" />
+            {isCloud ? (user?.email || 'Supabase account') : 'Local demo'}
+          </span>
         </div>
 
-        <h1 style={{ fontSize: 21, marginBottom: 8 }}>Set up your money system</h1>
+        <h1 className="welcome-title" style={{ fontSize: 30, marginBottom: 10 }}>Set up your money system</h1>
         <p className="text-sm text-muted" style={{ lineHeight: 1.75 }}>
           Define your starting balance once. Everything you record afterwards is measured
           against real entries — income, expenses and savings. Planned or hoped-for money is

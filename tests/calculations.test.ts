@@ -7,6 +7,7 @@ import {
   goalProgress,
   monthlySeries,
   monthlySummaries,
+  runningBalanceHistory,
 } from '../src/lib/calculations';
 import type { FinancialGoal, Transaction } from '../src/types/finance';
 
@@ -189,5 +190,38 @@ describe('dashboardStats', () => {
     );
     expect(stats.balance).toBe(500);
     expect(stats.totals.totalIncome).toBe(200);
+  });
+});
+
+describe('runningBalanceHistory (balance history visualization)', () => {
+  it('is driven only by recorded data — single point when the ledger is empty', () => {
+    const points = runningBalanceHistory(300, [], '2026-10-24');
+    expect(points).toEqual([{ date: '2026-10-24', balance: 300 }]);
+  });
+
+  it('tracks the running balance day by day from the first entry', () => {
+    const points = runningBalanceHistory(
+      300,
+      [
+        tx({ type: 'income', amount: 200, date: '2026-10-22' }),
+        tx({ type: 'expense', amount: 80, date: '2026-10-23' }),
+      ],
+      '2026-10-24',
+    );
+    expect(points[0]).toEqual({ date: '2026-10-22', balance: 500 });
+    expect(points[1]).toEqual({ date: '2026-10-23', balance: 420 });
+    expect(points[2]).toEqual({ date: '2026-10-24', balance: 420 });
+    expect(calculateBalance(300, [])).toBe(300);
+  });
+
+  it('final point equals the authoritative current balance', () => {
+    const transactions = [
+      tx({ type: 'income', amount: 450, date: '2026-10-10' }),
+      tx({ type: 'expense', amount: 120, date: '2026-10-15' }),
+    ];
+    const points = runningBalanceHistory(300, transactions, '2026-10-24');
+    expect(points[points.length - 1].balance).toBe(
+      calculateBalance(300, transactions),
+    );
   });
 });

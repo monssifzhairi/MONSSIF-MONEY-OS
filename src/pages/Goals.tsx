@@ -12,7 +12,7 @@ import {
   sanitizeGoalInput,
   validateGoalInput,
 } from '../lib/validation';
-import { PageHeader } from '../components/layout/AppShell';
+import { AppShell } from '../components/layout/AppShell';
 import {
   Badge,
   Button,
@@ -196,25 +196,24 @@ export function Goals() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Financial goals"
-        subtitle="Targets and deadlines, measured against money you actually have."
-        actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus size={15} />
-            New goal
-          </Button>
-        }
-      />
+    <AppShell
+      title="Financial goals"
+      dateLabel="Targets and deadlines, measured against money you actually have."
+      actions={
+        <Button
+          variant="ink"
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
+          <IconPlus size={15} />
+          New goal
+        </Button>
+      }
+    >
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="panel" style={{ marginBottom: 18 }}>
         <div className="row" style={{ gap: 12 }}>
           <div className="empty-icon" style={{ margin: 0 }}>
             <IconWallet size={20} />
@@ -231,7 +230,7 @@ export function Goals() {
       </div>
 
       {data.goals.length === 0 ? (
-        <div className="card">
+        <div className="panel">
           <EmptyState
             icon={<IconGoal size={20} />}
             title="No savings goals yet"
@@ -358,6 +357,6 @@ export function Goals() {
           setPendingDelete(null);
         }}
       />
-    </>
+    </AppShell>
   );
 }

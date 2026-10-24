@@ -252,3 +252,32 @@ export const IconKey = (p: IconProps) => (
     <path d="m14.5 8.5 2.5 2.5" />
   </Svg>
 );
+
+export const IconSearch = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </Svg>
+);
+
+export const IconFilter = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h16" />
+    <path d="M7 12h10" />
+    <path d="M10 18h4" />
+  </Svg>
+);
+
+export const IconIncome = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M17 7 7 17" />
+    <path d="M7 9v8h8" />
+  </Svg>
+);
+
+export const IconExpense = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 17 17 7" />
+    <path d="M9 7h8v8" />
+  </Svg>
+);

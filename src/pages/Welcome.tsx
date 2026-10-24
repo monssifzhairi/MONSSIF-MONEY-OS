@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { AuthVisual } from '../components/auth/AuthVisual';
+import { Wordmark } from '../components/ui/Brand';
 import { Button, useToast } from '../components/ui';
 import { IconArrowRight, IconLock, IconShield } from '../components/ui/icons';
 
@@ -19,17 +20,13 @@ export function Welcome() {
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="welcome-shell">
-      <AuthVisual mode="welcome" />
+    <div className="welcome-layout">
+      <AuthVisual />
 
       <div className="welcome-main">
         <div className="welcome-card">
           <div className="auth-mobile-bar" style={{ display: undefined, padding: '0 0 22px' }}>
-            <div className="brand-mark">M</div>
-            <div>
-              <div className="brand-word">MONSSIF MONEY OS</div>
-              <div className="brand-sub">Private finance · MAD</div>
-            </div>
+            <Wordmark />
           </div>
 
           <div className="badge badge-warning" style={{ marginBottom: 14 }}>

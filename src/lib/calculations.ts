@@ -193,6 +193,56 @@ export interface DashboardStats {
   monthToDate: Totals;
 }
 
+/**
+ * Balance history — a genuinely data-driven series of the running balance,
+ * built ONLY from the opening balance and recorded transactions. Never
+ * fabricated, never forward-looking.
+ *
+ * Returns daily points covering the recorded history (from the opening date /
+ * earliest transaction until today). With no transactions, a single point is
+ * returned so callers can decide to show an empty state instead.
+ */
+export interface BalancePoint {
+  date: string; // ISO YYYY-MM-DD
+  balance: number;
+}
+
+export function runningBalanceHistory(
+  openingBalance: number,
+  transactions: Transaction[],
+  asOfDate: string = todayISO(),
+): BalancePoint[] {
+  if (transactions.length === 0) {
+    return [{ date: asOfDate, balance: roundMoney(openingBalance) }];
+  }
+
+  const start = transactions.reduce(
+    (min, tx) => (tx.date < min ? tx.date : min),
+    transactions[0].date,
+  );
+  const [y, m, d] = start.split('-').map(Number);
+  const end = new Date(Date.UTC(...(asOfDate.split('-').map(Number) as [number, number, number])));
+  const cursor = new Date(Date.UTC(y, m - 1, d));
+
+  const byDate = new Map<string, number>();
+  for (const tx of transactions) {
+    const delta = tx.type === 'income' ? tx.amount : -tx.amount;
+    byDate.set(tx.date, (byDate.get(tx.date) ?? 0) + delta);
+  }
+
+  const points: BalancePoint[] = [];
+  let balance = roundMoney(openingBalance);
+  let guardCount = 0;
+  while (cursor.getTime() <= end.getTime() && guardCount < 4000) {
+    const iso = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}-${String(cursor.getUTCDate()).padStart(2, '0')}`;
+    balance = roundMoney(balance + (byDate.get(iso) ?? 0));
+    points.push({ date: iso, balance });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    guardCount += 1;
+  }
+  return points;
+}
+
 export function dashboardStats(
   openingBalance: number,
   transactions: Transaction[],

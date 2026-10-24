@@ -10,11 +10,11 @@ import {
 } from '../lib/calculations';
 import { formatMAD, formatMonthKey, monthKey, todayISO } from '../lib/format';
 import { csvFilename, downloadCSV, transactionsToCSV } from '../lib/csv';
-import { PageHeader } from '../components/layout/AppShell';
+import { AppShell } from '../components/layout/AppShell';
 import { CategoryDonut, MonthlyFlowChart } from '../components/charts/Charts';
 import { Button, EmptyState, useToast } from '../components/ui';
 import { IconDownload } from '../components/ui/icons';
-import { TransactionTable } from '../components/transactions/TransactionTable';
+import { ActivityList } from '../components/transactions/TransactionTable';
 
 export function Reports() {
   const { data, deleteTransaction, ready } = useFinance();
@@ -63,20 +63,18 @@ export function Reports() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Reports"
-        subtitle="Monthly summaries, category breakdowns and full history."
-        actions={
-          <Button variant="secondary" onClick={handleExport}>
-            <IconDownload size={15} />
-            Export all CSV
-          </Button>
-        }
-      />
-
+    <AppShell
+      title="Reports"
+      dateLabel="Monthly summaries, category breakdowns and full history."
+      actions={
+        <Button variant="secondary" onClick={handleExport}>
+          <IconDownload size={15} />
+          Export all CSV
+        </Button>
+      }
+    >
       {data.transactions.length === 0 ? (
-        <div className="card">
+        <div className="panel">
           <EmptyState
             title="No data to report yet"
             text="Reports appear once you record income and expenses. Try loading the sample dataset from Settings to preview the reports."
@@ -85,21 +83,21 @@ export function Reports() {
       ) : (
         <>
           <div className="grid-2-equal" style={{ marginBottom: 16 }}>
-            <div className="card">
-              <div className="card-header">
+            <div className="panel">
+              <div className="panel-head">
                 <div>
-                  <div className="card-title">Monthly income vs expenses</div>
-                  <div className="card-hint">Last 6 months · MAD</div>
+                  <div className="panel-title">Monthly income vs expenses</div>
+                  <div className="panel-hint">Last 6 months · MAD</div>
                 </div>
               </div>
               <MonthlyFlowChart data={series} />
             </div>
 
-            <div className="card">
-              <div className="card-header">
+            <div className="panel">
+              <div className="panel-head">
                 <div>
-                  <div className="card-title">Monthly summaries</div>
-                  <div className="card-hint">Newest first</div>
+                  <div className="panel-title">Monthly summaries</div>
+                  <div className="panel-hint">Newest first</div>
                 </div>
               </div>
               <div className="table-wrap" style={{ maxHeight: 320, overflowY: 'auto' }}>
@@ -130,11 +128,11 @@ export function Reports() {
           </div>
 
           <div className="grid-2-equal" style={{ marginBottom: 16 }}>
-            <div className="card">
-              <div className="card-header">
+            <div className="panel">
+              <div className="panel-head">
                 <div>
-                  <div className="card-title">Expense breakdown</div>
-                  <div className="card-hint">
+                  <div className="panel-title">Expense breakdown</div>
+                  <div className="panel-hint">
                     {expenseCats.length > 0
                       ? `${formatMAD(monthTotals.totalExpense)} this month · all-time split below`
                       : 'All time'}
@@ -148,11 +146,11 @@ export function Reports() {
               )}
             </div>
 
-            <div className="card">
-              <div className="card-header">
+            <div className="panel">
+              <div className="panel-head">
                 <div>
-                  <div className="card-title">Income breakdown</div>
-                  <div className="card-hint">All time</div>
+                  <div className="panel-title">Income breakdown</div>
+                  <div className="panel-hint">All time</div>
                 </div>
               </div>
               {incomeCats.length === 0 ? (
@@ -163,11 +161,11 @@ export function Reports() {
             </div>
           </div>
 
-          <div className="card">
-            <div className="card-header">
+          <div className="panel">
+            <div className="panel-head">
               <div>
-                <div className="card-title">Monthly history</div>
-                <div className="card-hint">Detailed transactions for one month</div>
+                <div className="panel-title">Monthly history</div>
+                <div className="panel-hint">Detailed transactions for one month</div>
               </div>
               <select
                 className="select"
@@ -201,15 +199,16 @@ export function Reports() {
                 </strong>
               </span>
             </div>
-            <TransactionTable
+            <ActivityList
               transactions={monthTransactions}
-              compact
               onEdit={() => toast.success('Open Transactions to edit entries.')}
               onDelete={(tx) => deleteTransaction(tx.id)}
+              emptyTitle="No transactions in this month"
+              emptyText="Pick another month — or record something today."
             />
           </div>
         </>
       )}
-    </>
+    </AppShell>
   );
 }

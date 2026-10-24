@@ -164,31 +164,32 @@ export function DashboardSkeleton() {
       <div className="row-between" style={{ marginBottom: 24 }}>
         <div style={{ display: 'grid', gap: 10 }}>
           <Skeleton width={120} height={11} />
-          <Skeleton width={230} height={30} />
+          <Skeleton width={260} height={34} />
         </div>
-        <Skeleton width={150} height={38} radius={10} />
+        <Skeleton width={170} height={38} radius={19} />
       </div>
-      <div className="hero-card" style={{ marginBottom: 16 }}>
+      <div className="hero-card" style={{ marginBottom: 18, borderRadius: 28 }}>
         <div className="hero-grid">
-          <div style={{ display: 'grid', gap: 12 }}>
-            <Skeleton width={110} height={10} />
-            <Skeleton width={280} height={48} />
-            <Skeleton width={190} height={12} />
+          <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
+            <Skeleton width={130} height={10} />
+            <Skeleton width={300} height={56} />
+            <Skeleton width={210} height={12} />
+            <div className="stat-grid" style={{ marginTop: 14 }}>
+              <Skeleton height={58} radius={12} />
+              <Skeleton height={58} radius={12} />
+              <Skeleton height={58} radius={12} />
+            </div>
           </div>
-          <div style={{ display: 'grid', gap: 12, justifyItems: 'center' }}>
-            <Skeleton width={168} height={168} radius={84} />
-            <Skeleton width={180} height={11} />
+          <div style={{ display: 'grid', gap: 12, alignContent: 'stretch' }}>
+            <Skeleton width={150} height={10} />
+            <Skeleton height={170} radius={14} />
           </div>
         </div>
       </div>
-      <div className="stat-grid">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} height={104} radius={16} />
-        ))}
-      </div>
+      <Skeleton height={190} radius={20} style={{ marginBottom: 18 }} />
       <div className="grid-2">
-        <Skeleton height={330} radius={16} />
-        <Skeleton height={330} radius={16} />
+        <Skeleton height={330} radius={20} />
+        <Skeleton height={330} radius={20} />
       </div>
     </div>
   );

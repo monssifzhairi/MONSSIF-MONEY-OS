@@ -1,4 +1,7 @@
-/** Transactions: full list, filtering, add / edit / delete with validation. */
+/**
+ * Transactions: full list, filtering, add / edit / delete with validation.
+ * The header summary keeps the honest running totals for the current filter.
+ */
 
 import { useMemo, useState } from 'react';
 import { useFinance } from '../data/store';
@@ -6,36 +9,34 @@ import type { Transaction, TransactionInput } from '../types/finance';
 import { calculateTotals } from '../lib/calculations';
 import { formatMAD } from '../lib/format';
 import { csvFilename, downloadCSV, transactionsToCSV } from '../lib/csv';
-import { PageHeader } from '../components/layout/AppShell';
-import { Button, EmptyState, useToast } from '../components/ui';
+import { AppShell, ModeChip } from '../components/layout/AppShell';
+import { Button, useToast } from '../components/ui';
 import { IconDownload, IconPlus } from '../components/ui/icons';
 import {
   EMPTY_FILTERS,
-  FilterBar,
-  TransactionTable,
+  TransactionList,
   applyFilters,
   type TransactionFilters,
 } from '../components/transactions/TransactionTable';
 import { TransactionForm } from '../components/transactions/TransactionForm';
 
 export function Transactions() {
-  const { data, addTransaction, updateTransaction, deleteTransaction, ready } = useFinance();
+  const { data, addTransaction, updateTransaction, deleteTransaction, ready, mode } = useFinance();
   const toast = useToast();
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_FILTERS);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
-  const filtered = useMemo(
-    () => applyFilters(data.transactions, filters),
-    [data.transactions, filters],
-  );
+  const filtered = useMemo(() => applyFilters(data.transactions, filters), [data.transactions, filters]);
   const filteredTotals = useMemo(() => calculateTotals(filtered), [filtered]);
   const hasFilters =
     filters.type !== 'all' ||
     Boolean(filters.category) ||
     Boolean(filters.from) ||
     Boolean(filters.to) ||
-    Boolean(filters.search);
+    Boolean(filters.search) ||
+    Boolean(filters.minAmount) ||
+    Boolean(filters.maxAmount);
 
   const handleSubmit = async (input: TransactionInput) => {
     try {
@@ -80,44 +81,40 @@ export function Transactions() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Transactions"
-        subtitle="Add, edit, filter and remove income and expense entries."
-        actions={
-          <>
-            <Button variant="secondary" onClick={handleExport}>
-              <IconDownload size={15} />
-              Export CSV
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <IconPlus size={15} />
-              Add transaction
-            </Button>
-          </>
-        }
-      />
-
-      <FilterBar filters={filters} onChange={setFilters} />
-
-      <div className="row-between" style={{ marginBottom: 12 }}>
+    <AppShell
+      title="Transactions"
+      dateLabel="Everything you have recorded, in one place."
+      actions={
+        <>
+          <ModeChip variant={mode === 'supabase' ? 'cloud' : 'local'} label={mode === 'supabase' ? 'Cloud · Supabase' : 'Local demo'} />
+          <Button variant="secondary" onClick={handleExport}>
+            <IconDownload size={15} />
+            Export CSV
+          </Button>
+          <Button
+            variant="ink"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            <IconPlus size={15} />
+            Add transaction
+          </Button>
+        </>
+      }
+    >
+      <div className="row-between" style={{ marginBottom: 18 }}>
         <div className="text-sm text-muted">
           {hasFilters ? (
             <>
-              <strong className="text-accent">{filtered.length}</strong> matching transactions ·
-              In <strong className="text-income">{formatMAD(filteredTotals.totalIncome)}</strong> ·
-              Out <strong className="text-expense">{formatMAD(filteredTotals.totalExpense)}</strong>
+              <strong className="text-accent">{filtered.length}</strong> matching transactions · In{' '}
+              <strong className="text-income">{formatMAD(filteredTotals.totalIncome)}</strong> · Out{' '}
+              <strong className="text-expense">{formatMAD(filteredTotals.totalExpense)}</strong>
             </>
           ) : (
             <>
-              <strong className="text-accent">{data.transactions.length}</strong> transactions
-              recorded · In{' '}
+              <strong className="text-accent">{data.transactions.length}</strong> transactions recorded · In{' '}
               <strong className="text-income">{formatMAD(filteredTotals.totalIncome)}</strong> · Out{' '}
               <strong className="text-expense">{formatMAD(filteredTotals.totalExpense)}</strong>
             </>
@@ -125,35 +122,28 @@ export function Transactions() {
         </div>
       </div>
 
-      {data.transactions.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            title="No transactions yet"
-            text="Record your first income or expense. Everything you enter is stored privately and recalculates your balance instantly."
-            action={
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus size={15} />
-                Add your first transaction
-              </Button>
-            }
-          />
-        </div>
-      ) : (
-        <TransactionTable
-          transactions={filtered}
-          onEdit={(tx) => {
-            setEditing(tx);
-            setFormOpen(true);
-          }}
-          onDelete={handleDelete}
-        />
-      )}
+      <TransactionList
+        transactions={data.transactions}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onEdit={(tx) => {
+          setEditing(tx);
+          setFormOpen(true);
+        }}
+        onDelete={handleDelete}
+        emptyAction={
+          <Button
+            variant="ink"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            <IconPlus size={15} />
+            {data.transactions.length === 0 ? 'Add your first transaction' : 'Add transaction'}
+          </Button>
+        }
+      />
 
       <TransactionForm
         open={formOpen}
@@ -164,6 +154,6 @@ export function Transactions() {
         }}
         onSubmit={handleSubmit}
       />
-    </>
+    </AppShell>
   );
 }

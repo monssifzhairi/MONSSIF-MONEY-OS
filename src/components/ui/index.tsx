@@ -17,7 +17,7 @@ import { IconAlert, IconCheck, IconClose, IconInbox } from './icons';
 
 /* ── Button ──────────────────────────────────────────────────────────────── */
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-solid';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'ghost-ink' | 'ink' | 'danger' | 'danger-solid';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

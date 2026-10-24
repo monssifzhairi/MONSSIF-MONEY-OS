@@ -1,7 +1,7 @@
 /**
  * Professional, restrained charts built on Recharts.
- * Palette: emerald for income, muted red for expenses, graphite surfaces.
- * Gradients are subtle and functional (depth), never decorative noise.
+ * Ledger Ivory palette: green for income, warm rust for expenses, quiet
+ * hairline grids on ivory surfaces. Gradients are subtle and functional.
  */
 
 import {
@@ -22,18 +22,18 @@ import { formatMAD, formatMADCompact, formatMonthKey } from '../../lib/format';
 
 const AXIS_STYLE = {
   fontSize: 11,
-  fill: '#67717d',
+  fill: '#8a958c',
   fontFamily: 'inherit',
 } as const;
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#171b21',
-  border: '1px solid #2a313a',
-  borderRadius: 10,
+  backgroundColor: '#0c1712',
+  border: '1px solid rgba(242,238,228,0.16)',
+  borderRadius: 12,
   fontSize: 12,
-  color: '#f2f5f7',
+  color: '#f2eee4',
   fontFamily: 'inherit',
-  boxShadow: '0 16px 40px -16px rgba(0,0,0,0.6)',
+  boxShadow: '0 24px 56px -24px rgba(12,23,18,0.5)',
 } as const;
 
 export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
@@ -48,20 +48,20 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
         <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }} barGap={4}>
           <defs>
             <linearGradient id="barIncome" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#35e0ab" />
-              <stop offset="100%" stopColor="#0d8f6a" />
+              <stop offset="0%" stopColor="#2FBF6B" />
+              <stop offset="100%" stopColor="#158049" />
             </linearGradient>
             <linearGradient id="barExpense" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f28a82" />
-              <stop offset="100%" stopColor="#a3443c" />
+              <stop offset="0%" stopColor="#D97066" />
+              <stop offset="100%" stopColor="#B5443A" />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#1d232a" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid stroke="#e2dac9" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="label"
             tick={AXIS_STYLE}
             tickLine={false}
-            axisLine={{ stroke: '#1d232a' }}
+            axisLine={{ stroke: '#e2dac9' }}
           />
           <YAxis
             tick={AXIS_STYLE}
@@ -72,7 +72,7 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
           />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
-            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+            cursor={{ fill: 'rgba(22,33,27,0.05)' }}
             formatter={(value: number, name: string) => [
               formatMAD(value),
               name === 'income' ? 'Income' : 'Expenses',
@@ -81,7 +81,7 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
           <Legend
             iconType="square"
             iconSize={9}
-            wrapperStyle={{ fontSize: 12, color: '#98a2ae', paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, color: '#57655c', paddingTop: 8 }}
             formatter={(value: string) => (value === 'income' ? 'Income' : 'Expenses')}
           />
           <Bar dataKey="income" fill="url(#barIncome)" radius={[4, 4, 0, 0]} maxBarSize={22} />
@@ -93,29 +93,29 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
 }
 
 const DONUT_COLORS = [
-  '#2dd4a0',
-  '#0fa97c',
-  '#0b8563',
-  '#57e6b8',
-  '#8bf0d0',
-  '#086f52',
-  '#35e0ab',
-  '#0d9b73',
-  '#065943',
-  '#044333',
+  '#1B9E5B',
+  '#158049',
+  '#0e6f3f',
+  '#4FCC84',
+  '#8FDDAF',
+  '#0a5731',
+  '#2FBF6B',
+  '#117A44',
+  '#5CBF8A',
+  '#083F24',
 ];
 
 const EXPENSE_COLORS = [
-  '#ef7168',
-  '#c9554c',
-  '#a3443c',
-  '#f28a82',
-  '#f7aca5',
-  '#932f28',
-  '#d96359',
-  '#7e2a24',
-  '#f5b8b2',
-  '#61211c',
+  '#B5443A',
+  '#C4564C',
+  '#9E352C',
+  '#D97066',
+  '#E7A099',
+  '#7E2A24',
+  '#CA5C52',
+  '#61211C',
+  '#E5B3AD',
+  '#4A1814',
 ];
 
 export function CategoryDonut({
@@ -142,7 +142,7 @@ export function CategoryDonut({
             innerRadius="58%"
             outerRadius="82%"
             paddingAngle={2}
-            stroke="#101216"
+            stroke="#0c1712"
             strokeWidth={2}
           >
             {chartData.map((_, i) => (
@@ -156,7 +156,7 @@ export function CategoryDonut({
           <Legend
             iconType="square"
             iconSize={9}
-            wrapperStyle={{ fontSize: 11.5, color: '#98a2ae', paddingTop: 4 }}
+            wrapperStyle={{ fontSize: 11.5, color: '#57655c', paddingTop: 4 }}
           />
         </PieChart>
       </ResponsiveContainer>

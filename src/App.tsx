@@ -17,7 +17,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { FinanceProvider, useFinance } from './data/store';
 import { ToastProvider } from './components/ui';
 import { DashboardSkeleton } from './components/ui/controls';
-import { AppShell } from './components/layout/AppShell';
+import { Wordmark } from './components/ui/Brand';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Goals } from './pages/Goals';
@@ -33,9 +33,7 @@ import { UpdatePassword } from './pages/auth/UpdatePassword';
 function Splash() {
   return (
     <div className="center-screen" role="status" aria-label="Loading">
-      <div className="brand-mark" style={{ width: 46, height: 46, fontSize: 22 }}>
-        M
-      </div>
+      <Wordmark />
       <div className="spinner" />
       <span className="text-dim text-sm">Starting MONSSIF MONEY OS…</span>
     </div>
@@ -78,27 +76,29 @@ function ProtectedApp() {
   }
 
   return (
-    <AppShell>
+    <>
+      {error ? (
+        <div className="error-banner" role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 300, maxWidth: 520, boxShadow: 'var(--shadow-lift)' }}>
+          {error}
+        </div>
+      ) : null}
       {!ready ? (
-        <DashboardSkeleton />
+        <div className="shell">
+          <div className="shell-content">
+            <DashboardSkeleton />
+          </div>
+        </div>
       ) : (
-        <>
-          {error ? (
-            <div className="error-banner" role="alert">
-              {error}
-            </div>
-          ) : null}
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       )}
-    </AppShell>
+    </>
   );
 }
 

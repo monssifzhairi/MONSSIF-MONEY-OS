@@ -2,7 +2,8 @@
 
 A private **personal finance operating system** — track money, income, expenses, savings and
 financial goals in **MAD (Moroccan dirham)**. Real authentication via Supabase Auth, strict
-per-user data isolation with PostgreSQL Row Level Security, and a cinematic dark interface.
+per-user data isolation with PostgreSQL Row Level Security, and a premium editorial
+light interface (“Ledger Ivory”: warm ivory canvas, deep green-ink sections, restrained green).
 
 **Money rules (non-negotiable)**
 
@@ -50,7 +51,7 @@ npm run dev        # → http://localhost:5173
 | `npm run dev` | Development server |
 | `npm run build` | Strict type-check + production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | Full test suite (88 tests) |
+| `npm test` | Full test suite (91 tests) |
 | `npm run test:watch` | Tests in watch mode |
 | `npm run typecheck` | TypeScript only |
 
@@ -124,9 +125,10 @@ Everything needed is included; a **free** Supabase project is enough.
 
 ## Features
 
-**Dashboard** — current balance from real entries only, income/expenses/net savings, a
-distinctive goal ring toward your target (e.g. 1,000 MAD) with days-left and remaining,
-premium income-vs-expense chart, this-month summary, top spending, recent transactions.
+**Dashboard** — balance as the primary element (ink hero) with an opening/income/expenses
+hierarchy, a data-driven running-balance history chart, an original horizontal milestone
+track toward your target (e.g. 1,000 MAD) with remaining/percentage/monthly pace, a premium
+filterable activity list, income-vs-expense comparison, monthly cash flow and top spending.
 
 **Transactions** — add/edit/delete with strict validation (positive amounts ≤ 2 decimals,
 required fields, category-per-type, ISO dates), filters (type, category, date range,
@@ -141,11 +143,13 @@ overdue/completed states, duplicate-name protection.
 recovery email), data export/reset (sample data only in Local Demo Mode), honest storage &
 privacy panel.
 
-**Design** — cinematic near-black background with atmospheric light pools, deep graphite
-cards, restrained emerald accents, Inter Variable + Instrument Serif typography, split-screen
-auth experience with an animated SVG balance curve, responsive desktop/tablet/mobile layouts,
-keyboard-accessible dialogs and focus rings, `prefers-reduced-motion` support, loading
-skeletons and polished empty/success/error states.
+**Design — “Ledger Ivory”** — warm ivory canvas with deep green-ink hero sections, oversized
+Fraunces editorial headings + Inter UI with tabular MAD numerals, a custom MONSSIF wordmark
+with a geometric rising-bars mark, minimal top navigation with an elegant account menu,
+original ledger artwork on auth screens, hairline tables and refined controls with full
+hover/focus/pressed/disabled states, responsive desktop/tablet/mobile layouts (bottom nav on
+mobile), keyboard-accessible dialogs and focus rings, `prefers-reduced-motion` support,
+loading skeletons and polished empty/success/error states.
 
 ---
 
@@ -165,11 +169,11 @@ is identical everywhere (MAD, 2 decimals, thousands separators).
 
 ## Testing & verification (automated)
 
-`npm test` → **88 tests passing**; `npm run build` → clean strict-TS production build.
+`npm test` → **91 tests passing**; `npm run build` → clean strict-TS production build.
 
 | Suite | Covers |
 | --- | --- |
-| `tests/calculations.test.ts` | Totals, balance (300 MAD opening), monthly series, breakdowns, goal progress |
+| `tests/calculations.test.ts` | Totals, balance (300 MAD opening), monthly series, breakdowns, goal progress, running-balance history |
 | `tests/validation.test.ts` | Amount/date/type/category rules, sanitization, rounding |
 | `tests/localRepository.test.ts` | One-time opening balance, CRUD, persistence, reset |
 | `tests/csv.test.ts` | CSV generation/escaping |
@@ -213,17 +217,17 @@ src/
 │   └── store.tsx             # finance state (bound to auth state)
 ├── components/
 │   ├── auth/                 # split-screen shell + animated SVG visual
-│   ├── layout/AppShell.tsx   # sidebar, account menu, mobile nav
+│   ├── layout/AppShell.tsx   # top navigation, account menu, mobile nav
 │   ├── ui/                   # buttons, modal, menu, password field, skeletons, icons
-│   ├── charts/               # bar/donut charts + goal ring
-│   └── transactions/         # form, table, filters
+│   ├── charts/               # bar/donut charts + balance history
+│   └── transactions/         # form, activity list, filters, goal track
 └── pages/
     ├── auth/                 # Login, Register, ForgotPassword, UpdatePassword
     ├── Welcome.tsx           # “Supabase not configured” setup screen
     ├── Setup.tsx             # one-time starting balance
     └── Dashboard/Transactions/Goals/Reports/Settings
 supabase/migrations/0001_init.sql   # schema + indexes + RLS + triggers
-tests/                                # 88 automated tests
+tests/                                # 91 automated tests
 ```
 
 ---
@@ -234,9 +238,9 @@ tests/                                # 88 automated tests
 sign-in, sign-out, password reset, persistent sessions, protected routes), per-user data
 isolation architecture (session-derived ids + RLS migration with complete CRUD ownership
 policies), one-time 300 MAD opening-balance semantics preserved, complete finance feature
-set, premium redesign, 88 passing tests, clean production build.
+set, the complete “Ledger Ivory” visual system, 91 passing tests, clean production build.
 
 **Requires real Supabase credentials (manual verification)** — live auth emails and links,
-live RLS enforcement, and a human visual pass over the redesign.
+live RLS enforcement, and a human visual pass over the redesign in a real browser.
 
 **Out of scope** — bank integrations, paid services, multi-currency. Budget: 0 MAD.

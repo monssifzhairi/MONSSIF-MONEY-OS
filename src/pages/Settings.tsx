@@ -15,7 +15,7 @@ import { calculateBalance } from '../lib/calculations';
 import { formatMAD, formatDate } from '../lib/format';
 import { csvFilename, downloadCSV, transactionsToCSV } from '../lib/csv';
 import { validateAmount } from '../lib/validation';
-import { PageHeader } from '../components/layout/AppShell';
+import { AppShell } from '../components/layout/AppShell';
 import { Badge, Button, ConfirmDialog, Modal, useToast } from '../components/ui';
 import { PasswordField } from '../components/ui/controls';
 import {
@@ -222,17 +222,12 @@ export function Settings() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Settings"
-        subtitle="Account, starting balance, data and privacy."
-      />
-
+    <AppShell title="Settings" dateLabel="Account, starting balance, data and privacy.">
       <div className="stack">
         {/* ── Account ─────────────────────────────────────────────────── */}
         <div className="settings-section">
           <div className="settings-section-head">
-            <h3 className="card-title">Account</h3>
+            <h3 className="panel-title">Account</h3>
           </div>
 
           {isCloud ? (
@@ -317,7 +312,7 @@ export function Settings() {
         {/* ── Financial setup ─────────────────────────────────────────── */}
         <div className="settings-section">
           <div className="settings-section-head">
-            <h3 className="card-title">Financial setup</h3>
+            <h3 className="panel-title">Financial setup</h3>
           </div>
 
           <div className="settings-row">
@@ -356,7 +351,7 @@ export function Settings() {
         {/* ── Data management ─────────────────────────────────────────── */}
         <div className="settings-section">
           <div className="settings-section-head">
-            <h3 className="card-title">Data management</h3>
+            <h3 className="panel-title">Data management</h3>
           </div>
 
           <div className="settings-row">
@@ -437,7 +432,7 @@ export function Settings() {
         {/* ── Storage & privacy ───────────────────────────────────────── */}
         <div className="settings-section">
           <div className="settings-section-head">
-            <h3 className="card-title">Storage & privacy</h3>
+            <h3 className="panel-title">Storage & privacy</h3>
           </div>
 
           <div className="settings-row">
@@ -524,6 +519,6 @@ export function Settings() {
           setConfirmReset(false);
         }}
       />
-    </>
+    </AppShell>
   );
 }
