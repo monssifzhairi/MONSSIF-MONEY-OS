@@ -177,8 +177,8 @@ function resetState() {
 
 let current: MountedApp | null = null;
 
-async function mount(): Promise<MountedApp> {
-  const a = await mountApp();
+async function mount(startPath = '/'): Promise<MountedApp> {
+  const a = await mountApp(startPath);
   current = a;
   return a;
 }
@@ -188,7 +188,7 @@ beforeEach(() => {
   localStorage.clear();
   vi.stubEnv('VITE_SUPABASE_URL', 'https://test-project.supabase.co');
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key-1234567890abcdef');
-  window.location.hash = '#/';
+  window.history.replaceState({}, '', '/');
 });
 
 afterEach(async () => {
@@ -221,7 +221,7 @@ describe('Protected routes (Supabase configured)', () => {
   it('redirects unauthenticated visitors from any route to the login page', async () => {
     const app = await mount();
     await app.waitFor(() => app.bodyText().includes('Welcome back'));
-    expect(window.location.hash).toContain('/auth/login');
+    expect(window.location.pathname).toContain('/auth/login');
     expect(app.container.querySelector('#login-email')).toBeTruthy();
   });
 
@@ -247,10 +247,9 @@ describe('Protected routes (Supabase configured)', () => {
   it('redirects authenticated users away from login/register pages', async () => {
     state.session = { user: SESSION_USER };
     seedAccount();
-    window.location.hash = '#/auth/login';
-    const app = await mount();
+    const app = await mount('/auth/login');
     await app.waitFor(() => app.bodyText().includes('Current balance'));
-    expect(window.location.hash).not.toContain('/auth/login');
+    expect(window.location.pathname).not.toContain('/auth/login');
   });
 
   it('renders the first-run setup when the opening balance was never set', async () => {
@@ -301,8 +300,7 @@ describe('Sign-in flow', () => {
 
 describe('Sign-up flow', () => {
   it('enforces password rules and matching confirmation', async () => {
-    window.location.hash = '#/auth/register';
-    const app = await mount();
+    const app = await mount('/auth/register');
     await app.waitFor(() => app.bodyText().includes('Create your account'));
     await app.setInput('#register-email', 'new@example.com');
     await app.setInput('#register-password', 'short');
@@ -313,8 +311,7 @@ describe('Sign-up flow', () => {
   });
 
   it('shows the check-your-inbox state when email confirmation is required', async () => {
-    window.location.hash = '#/auth/register';
-    const app = await mount();
+    const app = await mount('/auth/register');
     await app.waitFor(() => app.bodyText().includes('Create your account'));
     await app.setInput('#register-email', 'new@example.com');
     await app.setInput('#register-password', 'supersecret1');
@@ -327,8 +324,7 @@ describe('Sign-up flow', () => {
 
 describe('Password reset flow', () => {
   it('validates the email and shows the sent state', async () => {
-    window.location.hash = '#/auth/forgot-password';
-    const app = await mount();
+    const app = await mount('/auth/forgot-password');
     await app.waitFor(() => app.bodyText().includes('Reset your password'));
     await app.setInput('#forgot-email', 'nope');
     await app.clickButton(/Send recovery link/);
@@ -355,8 +351,7 @@ describe('Password reset flow', () => {
   it('updates the password via Supabase Auth', async () => {
     state.session = { user: SESSION_USER };
     seedAccount();
-    window.location.hash = '#/auth/update-password';
-    const app = await mount();
+    const app = await mount('/auth/update-password');
     await app.waitFor(() => app.bodyText().includes('Change your password'));
     await app.setInput('#update-password', 'newpassword9');
     await app.setInput('#update-confirm', 'newpassword9');

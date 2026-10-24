@@ -25,8 +25,10 @@ export interface MountedApp {
   setSelect: (selector: string, value: string) => Promise<void>;
 }
 
-export async function mountApp(): Promise<MountedApp> {
+export async function mountApp(startPath = '/'): Promise<MountedApp> {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  // Path-based routing (BrowserRouter): normalize the URL before render.
+  window.history.replaceState({}, '', startPath);
   const container = document.createElement('div');
   document.body.appendChild(container);
   let root!: Root;

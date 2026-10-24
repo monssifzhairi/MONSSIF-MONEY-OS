@@ -10,6 +10,23 @@
       content="MONSSIF MONEY OS — a private personal finance system for tracking income, expenses, savings and financial goals in MAD."
     />
     <title>MONSSIF MONEY OS</title>
+    <script>
+      // SPA fallback restore (GitHub Pages): 404.html hands the real path over
+      // via `?/path`; put it back in the address bar before the router boots.
+      // Inert on every other host.
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(null, null, l.pathname.replace(/\/$/, '') + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
   </head>
   <body>
     <div id="root"></div>

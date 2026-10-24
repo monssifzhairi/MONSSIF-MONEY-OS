@@ -11,9 +11,10 @@
  *    screen instead of any fake authentication.
  */
 
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { getSupabaseConfigIssue } from './data/repository';
 import { FinanceProvider, useFinance } from './data/store';
 import { ToastProvider } from './components/ui';
 import { DashboardSkeleton } from './components/ui/controls';
@@ -29,6 +30,35 @@ import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { UpdatePassword } from './pages/auth/UpdatePassword';
+
+/**
+ * Hard stop when Supabase env vars are partially or dangerously configured.
+ * Never falls back to demo mode on a misconfigured deployment, and never
+ * boots with a service-role key in the bundle.
+ */
+function ConfigErrorScreen({ issue }: { issue: string }) {
+  return (
+    <div className="center-screen" role="alert" style={{ padding: 24 }}>
+      <Wordmark />
+      <div className="panel" style={{ maxWidth: 560, textAlign: 'left' }}>
+        <div className="badge badge-expense" style={{ marginBottom: 12 }}>
+          Configuration error
+        </div>
+        <h1 className="auth-form-title" style={{ fontSize: 24, marginBottom: 10 }}>
+          Cloud mode is misconfigured
+        </h1>
+        <p className="text-sm text-muted" style={{ lineHeight: 1.75, marginBottom: 14 }}>
+          {issue}
+        </p>
+        <p className="text-sm text-dim" style={{ lineHeight: 1.75 }}>
+          Fix the environment variables in your hosting provider (or local{' '}
+          <span className="mono">.env</span>) and reload. This screen will never pretend
+          authentication works, and no data is stored while it is shown.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function Splash() {
   return (
@@ -102,12 +132,22 @@ function ProtectedApp() {
   );
 }
 
+/**
+ * Vite's BASE_URL is `/` at a domain root or `/repo-name/` on a sub-path host
+ * (e.g. GitHub Pages project sites). React Router wants it without the
+ * trailing slash so both deployments share one code path.
+ */
+const routerBasename = import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+
 export default function App() {
+  // Re-evaluated on every render so the gate reflects the actual runtime env.
+  const configIssue = getSupabaseConfigIssue();
+  if (configIssue) return <ConfigErrorScreen issue={configIssue} />;
   return (
     <AuthProvider>
       <FinanceProvider>
         <ToastProvider>
-          <HashRouter>
+          <BrowserRouter basename={routerBasename}>
             <Routes>
               <Route
                 path="/auth/login"
@@ -150,7 +190,7 @@ export default function App() {
                 }
               />
             </Routes>
-          </HashRouter>
+          </BrowserRouter>
         </ToastProvider>
       </FinanceProvider>
     </AuthProvider>

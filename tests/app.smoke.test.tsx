@@ -6,7 +6,7 @@
  * first-time setup. All figures shown are computed from real data.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountApp, type MountedApp } from './appHelpers';
 
 let app: MountedApp;
@@ -136,5 +136,19 @@ describe('Dashboard balance updates (local demo)', () => {
 
     expect(app.bodyText()).toContain('300.00 MAD');
     expect(app.bodyText()).toContain('No transactions yet');
+  });
+});
+
+describe('Configuration error gate (misconfigured Supabase env)', () => {
+  it('blocks the app with a clear error instead of pretending cloud mode is off', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
+    // VITE_SUPABASE_ANON_KEY deliberately missing.
+    app = await mountApp();
+    await app.waitFor(() => app.bodyText().includes('Cloud mode is misconfigured'));
+    expect(app.bodyText()).toContain('VITE_SUPABASE_ANON_KEY is missing');
+    expect(app.bodyText()).toContain('will never pretend');
+    // No fake login, no demo fallback on a misconfigured deployment.
+    expect(app.container.querySelector('#login-email')).toBeNull();
+    vi.unstubAllEnvs();
   });
 });

@@ -67,7 +67,7 @@ export function BalanceHistory({
           <svg
             className="history-chart"
             viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
             role="img"
             aria-label={`Balance history from ${formatDate(first.date)} to ${formatDate(last.date)}`}
           >

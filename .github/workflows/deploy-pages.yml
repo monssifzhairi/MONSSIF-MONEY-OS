@@ -1,0 +1,58 @@
+name: Deploy to GitHub Pages
+
+# Builds the production bundle and deploys it to GitHub Pages.
+# Runs on every push to the session branch, or manually via workflow_dispatch.
+on:
+  push:
+    branches: [arena/29fb6e20-monssif-money-os]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      # Deploy gates: a failing suite must block the release.
+      - name: Tests
+        run: npm test
+
+      # Project site lives at https://OWNER.github.io/MONSSIF-MONEY-OS/
+      - name: Build (sub-path base)
+        run: npx vite build --base=/MONSSIF-MONEY-OS/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

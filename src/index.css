@@ -1192,8 +1192,10 @@ textarea {
 }
 
 .history-chart {
-  flex: 1;
-  min-height: 190px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 200;
+  min-height: 160px;
 }
 
 .history-empty {
@@ -2653,6 +2655,35 @@ textarea {
   }
   .page-head {
     gap: 14px;
+  }
+  /* Keep forms and dialogs comfortably inside a 360px viewport. */
+  .auth-form-side,
+  .welcome-main {
+    padding: 26px 22px 40px;
+  }
+  .setup-card {
+    padding: 26px 20px;
+  }
+  .panel {
+    padding: 20px 18px;
+  }
+  .modal-head {
+    padding: 18px 18px 0;
+  }
+  .modal-body {
+    padding: 18px;
+  }
+  .modal-foot {
+    padding: 0 18px 18px;
+  }
+  .bar-row {
+    grid-template-columns: 84px 1fr 80px;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .filters .field {
+    min-width: 132px;
+    flex: 1 1 132px;
   }
 }
 

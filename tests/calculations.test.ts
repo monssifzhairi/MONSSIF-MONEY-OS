@@ -225,3 +225,59 @@ describe('runningBalanceHistory (balance history visualization)', () => {
     );
   });
 });
+
+/* ─── Financial-correctness matrix (release gate) ─────────────────────────── */
+
+describe('financial edge-case matrix', () => {
+  it('income only: expenses stay zero and net equals income', () => {
+    const t = calculateTotals([tx({ type: 'income', amount: 900 }), tx({ type: 'income', amount: 600 })]);
+    expect(t.totalIncome).toBe(1500);
+    expect(t.totalExpense).toBe(0);
+    expect(t.netSavings).toBe(1500);
+    expect(calculateBalance(300, [tx({ type: 'income', amount: 900 })])).toBe(1200);
+  });
+
+  it('expenses only: income stays zero and balance can drop below the opening', () => {
+    const t = calculateTotals([tx({ type: 'expense', amount: 250 }), tx({ type: 'expense', amount: 220 })]);
+    expect(t.totalIncome).toBe(0);
+    expect(t.totalExpense).toBe(470);
+    expect(t.netSavings).toBe(-470);
+    expect(calculateBalance(300, [tx({ type: 'expense', amount: 400 })])).toBe(-100);
+  });
+
+  it('negative net cash flow shows negative monthly net without inventing income', () => {
+    const series = monthlySeries(
+      [tx({ type: 'expense', amount: 500, date: '2026-10-05' })],
+      6,
+    );
+    const oct = series.find((m) => m.key === '2026-10');
+    expect(oct?.income).toBe(0);
+    expect(oct?.expense).toBe(500);
+    expect(oct?.net).toBe(-500);
+  });
+
+  it('goal completion fires exactly at the 1,000 MAD target', () => {
+    const goal: FinancialGoal = {
+      id: 'g2',
+      name: 'First 1,000 MAD',
+      targetAmount: 1000,
+      deadline: '2027-01-01',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    };
+    expect(goalProgress(goal, 999.99, '2026-10-24').completed).toBe(false);
+    const exact = goalProgress(goal, 1000, '2026-10-24');
+    expect(exact.completed).toBe(true);
+    expect(exact.percent).toBe(100);
+    expect(exact.remaining).toBe(0);
+    // 300 MAD opening alone = 30% of the 1,000 MAD goal.
+    expect(goalProgress(goal, 300, '2026-10-24').percent).toBe(30);
+  });
+
+  it('zero transactions: every summary stays at zero and balance equals opening', () => {
+    expect(calculateTotals([]).totalIncome).toBe(0);
+    expect(calculateTotals([]).totalExpense).toBe(0);
+    expect(calculateBalance(300, [])).toBe(300);
+    expect(runningBalanceHistory(300, [])).toEqual([{ date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), balance: 300 }]);
+  });
+});

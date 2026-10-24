@@ -72,9 +72,15 @@ Everything needed is included; a **free** Supabase project is enough.
 3. **Auth settings** (Dashboard → Authentication):
    - Enable **Email** provider. Turn email confirmation on or off as you prefer (the app
      handles both flows).
-   - Add your app URL(s) to **Authentication → URL Configuration → Redirect URLs** (e.g.
-     `http://localhost:5173` and your production origin). Password-recovery emails return
-     the user to this origin so the app can show the “choose a new password” screen.
+   - **Authentication → URL Configuration**:
+     - **Site URL** — your production origin, e.g.
+       `https://monssifzhairi.github.io/MONSSIF-MONEY-OS/`
+     - **Redirect URLs** — add exactly:
+       - `http://localhost:5173/**` (local dev)
+       - `https://monssifzhairi.github.io/MONSSIF-MONEY-OS/**` (production, sub-path)
+       - `https://YOUR-CUSTOM-DOMAIN/**` (if you map a custom domain later)
+     Password-recovery emails return the user to these origins so the app can show the
+     “choose a new password” screen. The app never sends tokens to any other origin.
 4. **Environment variables**: copy `.env.example` → `.env` and set:
 
    ```bash
@@ -192,10 +198,39 @@ is identical everywhere (MAD, 2 decimals, thousands separators).
 
 ## Deployment (free static hosting)
 
-`dist/` is a static site. Deploy to Netlify (`npm run build`, publish `dist/`), Vercel
-(preset “Vite”), or GitHub Pages (the app uses `HashRouter` — no rewrite rules needed). Set
-the two `VITE_` variables as build-time env vars in the host dashboard, and add the deployed
-origin to Supabase Auth **Redirect URLs**.
+`dist/` is a static site. Routing uses **clean URLs** (`/auth/login`, `/transactions`, …)
+with SPA fallback, so the host must serve `index.html` for unknown paths. This repo ships
+the config for all three free hosts:
+
+| Host | SPA fallback config | Build | Output |
+| --- | --- | --- | --- |
+| **GitHub Pages** | `public/404.html` + inline restore script in `index.html` | `npx vite build --base=/MONSSIF-MONEY-OS/` | `dist/` |
+| **Vercel** | `vercel.json` (rewrites + cache headers) | `npm run build` | `dist/` |
+| **Cloudflare Pages / Netlify** | `public/_redirects` (`/* /index.html 200`) | `npm run build` | `dist/` |
+
+**Environment variables** are set in the hosting provider’s dashboard (build-time),
+never committed: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (anon/publishable only).
+With both left empty the deployed site runs in the honest “Supabase not configured”
+welcome + Local Demo Mode. The build refuses to boot on a partial or service-role-key
+configuration (see `tests/config.test.ts`).
+
+### GitHub Pages (CI)
+
+`.github/workflows/deploy-pages.yml` deploys on every push to the session branch:
+`npm ci` → `tsc` → `npm test` → `vite build --base=/MONSSIF-MONEY-OS/` → Pages artifact.
+Enable once: **Settings → Pages → Source: GitHub Actions**. The site lives at
+`https://OWNER.github.io/MONSSIF-MONEY-OS/` (sub-path base is passed at build time).
+
+### Vercel / Cloudflare Pages
+
+Import the repo, keep the detected Vite preset (`npm run build`, output `dist/`), add the
+two `VITE_` variables in the dashboard, deploy. Then add the final origin to Supabase
+**Authentication → URL Configuration → Redirect URLs** (`https://YOUR-DOMAIN/**`).
+
+### Cache behavior
+
+Hashed assets under `/assets/` are served `immutable` (see `vercel.json`); `index.html`
+is `no-cache` so releases propagate immediately.
 
 ---
 
