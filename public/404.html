@@ -1,0 +1,29 @@
+<!doctype html>
+<!--
+  GitHub Pages SPA fallback.
+  GitHub Pages has no rewrite rules, so unknown paths get this 404 page.
+  It preserves the requested path (and any #hash, e.g. Supabase recovery
+  tokens) and hands it to index.html, which restores the real URL via
+  history.replaceState. Inert on hosts that already do SPA rewrites
+  (Vercel / Cloudflare Pages).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MONSSIF MONEY OS</title>
+    <script>
+      (function () {
+        var KEEP = 1; // project site: keep /REPO_NAME/
+        var l = window.location;
+        var parts = l.pathname.split('/');
+        var base = parts.slice(0, 1 + KEEP).join('/') + '/';
+        var rest = l.pathname.slice(base.length) || '';
+        var query = l.search.replace(/^\?/, '').replace(/&/g, '~and~');
+        var target = l.protocol + '//' + l.host + base + '?/' + rest + (query ? '?' + query : '') + l.hash;
+        l.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

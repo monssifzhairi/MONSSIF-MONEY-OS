@@ -1,0 +1,3 @@
+# SPA fallback — Cloudflare Pages / Netlify.
+# Deep links like /transactions or /auth/login must serve the app shell.
+/*    /index.html   200
