@@ -41,7 +41,19 @@ jobs:
       - name: Build (sub-path base)
         run: npx vite build --base=/MONSSIF-MONEY-OS/
 
-      - uses: actions/configure-pages@v5
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          # Auto-enable Pages (Settings → Pages → Source: GitHub Actions) from
+          # within the run. Per this action's contract this REQUIRES a token
+          # other than GITHUB_TOKEN — store a classic PAT with the `repo`
+          # scope (or a fine-grained token with Pages: write) as the repository
+          # secret PAGES_ADMIN_TOKEN and this step enables + deploys hands-free.
+          # If the secret is absent, the default GITHUB_TOKEN is used and Pages
+          # must be enabled manually once in Settings → Pages.
+          enablement: true
+          token: ${{ secrets.PAGES_ADMIN_TOKEN || github.token }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -56,3 +68,13 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Print an actionable fix if the build job failed at Pages setup.
+  explain-failure:
+    needs: build
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: How to fix Pages enablement
+        run: |
+          echo "::error::GitHub Pages is not enabled for this repository. Fix (one click): Settings → Pages → Source: GitHub Actions — then re-run this workflow. Alternative (hands-free): add a repository secret PAGES_ADMIN_TOKEN containing a PAT with the 'repo' scope; the workflow will then enable Pages by itself via actions/configure-pages enablement."

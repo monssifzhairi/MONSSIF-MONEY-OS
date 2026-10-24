@@ -218,8 +218,16 @@ configuration (see `tests/config.test.ts`).
 
 `.github/workflows/deploy-pages.yml` deploys on every push to the session branch:
 `npm ci` → `tsc` → `npm test` → `vite build --base=/MONSSIF-MONEY-OS/` → Pages artifact.
-Enable once: **Settings → Pages → Source: GitHub Actions**. The site lives at
-`https://OWNER.github.io/MONSSIF-MONEY-OS/` (sub-path base is passed at build time).
+
+**One-time enablement** — pick either:
+1. **One click:** Settings → Pages → Source: **GitHub Actions**, then re-run the workflow; or
+2. **Hands-free:** add a repository secret `PAGES_ADMIN_TOKEN` holding a classic PAT with the
+   `repo` scope (or a fine-grained token with *Pages: write*). The workflow then enables
+   Pages itself through `actions/configure-pages` (`enablement: true`).
+
+The site lives at `https://OWNER.github.io/MONSSIF-MONEY-OS/` (sub-path base is passed at
+build time). If the workflow fails at **Setup Pages**, one of the two steps above is
+missing — the run log prints this exact fix.
 
 ### Vercel / Cloudflare Pages
 
