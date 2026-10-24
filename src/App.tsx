@@ -108,7 +108,7 @@ function ProtectedApp() {
   return (
     <>
       {error ? (
-        <div className="error-banner" role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 300, maxWidth: 520, boxShadow: 'var(--shadow-lift)' }}>
+        <div className="error-banner" role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 300, maxWidth: 'min(520px, calc(100vw - 24px))', boxShadow: 'var(--shadow-lift)' }}>
           {error}
         </div>
       ) : null}

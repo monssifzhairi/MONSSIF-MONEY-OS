@@ -85,7 +85,7 @@ export function BalanceHistory({
             <circle cx={x(0)} cy={y(first.balance)} r="4" fill="#4FCC84" fillOpacity="0.7" />
             <circle cx={x(points.length - 1)} cy={y(last.balance)} r="5.5" fill="#4FCC84" stroke="#0C1712" strokeWidth="2" />
           </svg>
-          <div className="hero-history-meta" style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+          <div className="hero-history-meta history-foot" style={{ marginTop: 10 }}>
             <span>
               {formatDate(first.date)} · {formatMADNumber(first.balance)} MAD
             </span>

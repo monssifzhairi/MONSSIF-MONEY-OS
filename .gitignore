@@ -24,3 +24,8 @@ npm-debug.log*
 
 # Test / coverage
 coverage/
+
+# Responsive-audit harness (scripts kept; generated captures are not)
+.probe/shots/
+.probe/*.png
+.probe/*.json

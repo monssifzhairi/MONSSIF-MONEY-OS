@@ -205,7 +205,7 @@ export function Dashboard() {
               </div>
             </div>
             <div className="bar-list">
-              <div className="bar-row" style={{ gridTemplateColumns: '90px 1fr 110px' }}>
+              <div className="bar-row">
                 <span className="bar-label">
                   <IconTrendUp size={13} className="text-income" /> Income
                 </span>
@@ -219,7 +219,7 @@ export function Dashboard() {
                 </div>
                 <span className="bar-value text-income">{formatMAD(totals.totalIncome)}</span>
               </div>
-              <div className="bar-row" style={{ gridTemplateColumns: '90px 1fr 110px' }}>
+              <div className="bar-row">
                 <span className="bar-label">
                   <IconTrendDown size={13} className="text-expense" /> Expenses
                 </span>
@@ -301,7 +301,7 @@ export function Dashboard() {
             ) : (
               <div className="bar-list">
                 {topCategories.map((c) => (
-                  <div className="bar-row" key={c.category} style={{ gridTemplateColumns: '110px 1fr 96px' }}>
+                  <div className="bar-row" key={c.category}>
                     <span className="bar-label">{c.category}</span>
                     <div className="bar-track">
                       <div className="bar-fill expense" style={{ width: `${(c.total / maxCategory) * 100}%` }} />

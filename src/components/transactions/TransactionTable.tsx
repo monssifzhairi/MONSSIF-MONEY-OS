@@ -91,7 +91,7 @@ export function FilterBar({
           />
         </div>
 
-        <div className="segmented" style={{ width: 236, gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="segmented three" style={{ flex: '1 1 220px', maxWidth: 280 }}>
           <button
             type="button"
             className={filters.type === 'all' ? 'active-income' : ''}
