@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import puppeteer from 'puppeteer-core';
 
 const BASE = process.env.AUDIT_BASE || 'http://127.0.0.1:4180';
-const WIDTHS = [320, 360, 375, 390, 430];
+const WIDTHS = process.env.AUDIT_WIDTHS ? process.env.AUDIT_WIDTHS.split(',').map(Number) : [320, 360, 375, 390, 430];
 const TAG = process.env.AUDIT_TAG || 'run';
 
 const DEMO_SEED = {
