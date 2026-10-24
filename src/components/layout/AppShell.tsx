@@ -1,16 +1,23 @@
-/** Application shell: desktop sidebar, mobile header + bottom navigation. */
+/**
+ * Application shell: desktop sidebar, topbar with account menu, mobile header
+ * and bottom navigation. The account menu reflects the true mode at all times
+ * (signed-in Supabase user vs. explicitly labeled local demo).
+ */
 
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useFinance } from '../../data/store';
+import { useAuth } from '../../auth/AuthContext';
 import {
   IconDashboard,
   IconGoal,
+  IconKey,
+  IconLogOut,
   IconReports,
   IconSettings,
   IconTransactions,
-  IconWallet,
 } from '../ui/icons';
+import { Menu } from '../ui/controls';
+import { Badge, useToast } from '../ui';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: IconDashboard, end: true },
@@ -25,21 +32,140 @@ function Brand() {
     <div className="sidebar-brand">
       <div className="brand-mark">M</div>
       <div>
-        <div className="brand-name">MONSSIF MONEY OS</div>
+        <div className="brand-word">MONSSIF MONEY OS</div>
         <div className="brand-sub">Personal finance</div>
       </div>
     </div>
   );
 }
 
-function ModeBadge() {
-  const { mode } = useFinance();
-  const isLocal = mode === 'local';
+function ModePill() {
+  const { status, user } = useAuth();
+  const live = status === 'authenticated';
   return (
-    <div className="mode-badge" title={isLocal ? 'Data is stored in this browser only.' : 'Connected to Supabase.'}>
-      <span className={`mode-dot${isLocal ? '' : ' live'}`} />
-      {isLocal ? 'Local mode · browser storage' : 'Supabase connected'}
+    <div
+      className="mode-pill"
+      title={
+        live
+          ? 'Signed in with Supabase. Your data is stored in your project and protected by Row Level Security.'
+          : 'Local Demo Mode — data stays in this browser. No account, no sync.'
+      }
+    >
+      <span className={`mode-dot${live ? ' live' : ''}`} />
+      {live ? (
+        <span>
+          Supabase cloud
+          <br />
+          <span className="text-dim">{user?.email || 'signed in'}</span>
+        </span>
+      ) : (
+        <span>
+          <strong className="text-muted">Local demo</strong>
+          <br />
+          <span className="text-dim">browser-only · no sync</span>
+        </span>
+      )}
     </div>
+  );
+}
+
+function AccountMenu() {
+  const { status, user, signOut, exitLocalDemo } = useAuth();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const live = status === 'authenticated';
+  const email = user?.email ?? 'Local demo';
+  const initials = live && email ? email.slice(0, 2).toUpperCase() : 'MD';
+
+  return (
+    <Menu
+      label="Account menu"
+      trigger={
+        <>
+          <span className={`avatar${live ? '' : ' demo'}`} aria-hidden="true">
+            {initials}
+          </span>
+          <span className="account-btn-label">{live ? email : 'Local demo'}</span>
+        </>
+      }
+    >
+      {(close) => (
+        <>
+          <div className="menu-header">
+            <div className="menu-email">{live ? email : 'Local Demo Mode'}</div>
+            <div style={{ marginTop: 6 }}>
+              {live ? (
+                <Badge kind="income">Supabase · authenticated</Badge>
+              ) : (
+                <Badge kind="warning">No account · no sync</Badge>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item"
+            onClick={() => {
+              close();
+              navigate('/settings');
+            }}
+          >
+            <IconSettings size={15} /> Settings
+          </button>
+
+          {live ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item"
+              onClick={() => {
+                close();
+                navigate('/auth/update-password');
+              }}
+            >
+              <IconKey size={15} /> Change password
+            </button>
+          ) : null}
+
+          <div className="menu-divider" />
+
+          {live ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item danger"
+              onClick={async () => {
+                close();
+                try {
+                  await signOut();
+                  toast.success('Signed out', 'Your session ended on this device.');
+                  navigate('/auth/login', { replace: true });
+                } catch (err) {
+                  toast.error('Could not sign out', (err as Error).message);
+                }
+              }}
+            >
+              <IconLogOut size={15} /> Sign out
+            </button>
+          ) : (
+            <button
+              type="button"
+              role="menuitem"
+              className="menu-item danger"
+              onClick={() => {
+                close();
+                exitLocalDemo();
+                toast.success('Left Local Demo Mode', 'Connect Supabase for real accounts.');
+                navigate('/', { replace: true });
+              }}
+            >
+              <IconLogOut size={15} /> Exit local demo
+            </button>
+          )}
+        </>
+      )}
+    </Menu>
   );
 }
 
@@ -77,19 +203,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           <NavItems />
         </div>
         <div className="sidebar-foot">
-          <ModeBadge />
+          <ModePill />
         </div>
       </aside>
 
       <div className="shell-main">
+        <div className="shell-topbar">
+          <AccountMenu />
+        </div>
+
         <header className="mobile-header">
           <div className="sidebar-brand" style={{ padding: 0 }}>
             <div className="brand-mark">M</div>
             <div>
-              <div className="brand-name">MONSSIF MONEY OS</div>
+              <div className="brand-word">MONSSIF MONEY OS</div>
             </div>
           </div>
-          <ModeBadge />
+          <AccountMenu />
         </header>
 
         <main className="shell-content">{children}</main>
@@ -100,7 +230,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           {NAV.map(({ to, label, icon: Icon, end }) => {
             const active = end ? location.pathname === to : location.pathname.startsWith(to);
             return (
-              <NavLink key={to} to={to} end={end} className={`bottom-nav-item${active ? ' active' : ''}`}>
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={`bottom-nav-item${active ? ' active' : ''}`}
+              >
                 <Icon size={19} />
                 {label}
               </NavLink>
@@ -110,9 +245,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Keeps a11y landmark consistent for screen readers */}
-      <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-        MONSSIF MONEY OS — {current.label}
-      </h1>
+      <h1 className="visually-hidden">MONSSIF MONEY OS — {current.label}</h1>
     </div>
   );
 }
@@ -129,12 +262,10 @@ export function PageHeader({
   return (
     <div className="page-header">
       <div>
-        <h2 className="page-title">{title}</h2>
+        <h2 className="page-title display">{title}</h2>
         {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
       </div>
       {actions ? <div className="page-actions">{actions}</div> : null}
     </div>
   );
 }
-
-export { IconWallet };

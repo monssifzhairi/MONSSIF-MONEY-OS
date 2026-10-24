@@ -1,6 +1,7 @@
 /**
  * Professional, restrained charts built on Recharts.
- * Palette: emerald for income, muted red for expenses, charcoal surfaces.
+ * Palette: emerald for income, muted red for expenses, graphite surfaces.
+ * Gradients are subtle and functional (depth), never decorative noise.
  */
 
 import {
@@ -21,17 +22,18 @@ import { formatMAD, formatMADCompact, formatMonthKey } from '../../lib/format';
 
 const AXIS_STYLE = {
   fontSize: 11,
-  fill: '#6d7681',
+  fill: '#67717d',
   fontFamily: 'inherit',
 } as const;
 
 const TOOLTIP_STYLE = {
-  backgroundColor: '#171a1f',
-  border: '1px solid #333a44',
+  backgroundColor: '#171b21',
+  border: '1px solid #2a313a',
   borderRadius: 10,
   fontSize: 12,
-  color: '#f3f5f7',
+  color: '#f2f5f7',
   fontFamily: 'inherit',
+  boxShadow: '0 16px 40px -16px rgba(0,0,0,0.6)',
 } as const;
 
 export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
@@ -44,12 +46,22 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
     <div className="chart-wrap">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }} barGap={4}>
-          <CartesianGrid stroke="#21252b" strokeDasharray="3 3" vertical={false} />
+          <defs>
+            <linearGradient id="barIncome" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#35e0ab" />
+              <stop offset="100%" stopColor="#0d8f6a" />
+            </linearGradient>
+            <linearGradient id="barExpense" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f28a82" />
+              <stop offset="100%" stopColor="#a3443c" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="#1d232a" strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="label"
             tick={AXIS_STYLE}
             tickLine={false}
-            axisLine={{ stroke: '#262b33' }}
+            axisLine={{ stroke: '#1d232a' }}
           />
           <YAxis
             tick={AXIS_STYLE}
@@ -69,11 +81,11 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
           <Legend
             iconType="square"
             iconSize={9}
-            wrapperStyle={{ fontSize: 12, color: '#9aa2ad', paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, color: '#98a2ae', paddingTop: 8 }}
             formatter={(value: string) => (value === 'income' ? 'Income' : 'Expenses')}
           />
-          <Bar dataKey="income" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={22} />
-          <Bar dataKey="expense" fill="#e06c65" radius={[3, 3, 0, 0]} maxBarSize={22} />
+          <Bar dataKey="income" fill="url(#barIncome)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+          <Bar dataKey="expense" fill="url(#barExpense)" radius={[4, 4, 0, 0]} maxBarSize={22} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -81,29 +93,29 @@ export function MonthlyFlowChart({ data }: { data: MonthlyPoint[] }) {
 }
 
 const DONUT_COLORS = [
-  '#10b981',
-  '#0e9f76',
+  '#2dd4a0',
+  '#0fa97c',
   '#0b8563',
-  '#34d399',
-  '#6ee7b7',
-  '#a7f3d0',
-  '#059669',
-  '#047857',
-  '#065f46',
-  '#064e3b',
+  '#57e6b8',
+  '#8bf0d0',
+  '#086f52',
+  '#35e0ab',
+  '#0d9b73',
+  '#065943',
+  '#044333',
 ];
 
 const EXPENSE_COLORS = [
-  '#e06c65',
-  '#c95a54',
-  '#b34a44',
-  '#e98a84',
-  '#f0a5a0',
-  '#f5c0bc',
-  '#a33b35',
-  '#8c322d',
-  '#752925',
-  '#5e201d',
+  '#ef7168',
+  '#c9554c',
+  '#a3443c',
+  '#f28a82',
+  '#f7aca5',
+  '#932f28',
+  '#d96359',
+  '#7e2a24',
+  '#f5b8b2',
+  '#61211c',
 ];
 
 export function CategoryDonut({
@@ -130,7 +142,7 @@ export function CategoryDonut({
             innerRadius="58%"
             outerRadius="82%"
             paddingAngle={2}
-            stroke="#121418"
+            stroke="#101216"
             strokeWidth={2}
           >
             {chartData.map((_, i) => (
@@ -144,7 +156,7 @@ export function CategoryDonut({
           <Legend
             iconType="square"
             iconSize={9}
-            wrapperStyle={{ fontSize: 11.5, color: '#9aa2ad', paddingTop: 4 }}
+            wrapperStyle={{ fontSize: 11.5, color: '#98a2ae', paddingTop: 4 }}
           />
         </PieChart>
       </ResponsiveContainer>

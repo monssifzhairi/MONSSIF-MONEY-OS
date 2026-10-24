@@ -1,14 +1,20 @@
 /**
- * Supabase mode: persistent storage + authentication against Supabase
- * Postgres, with Row Level Security (see `supabase/migrations/0001_init.sql`).
+ * Supabase mode: persistent storage against Supabase Postgres with Row Level
+ * Security (see `supabase/migrations/0001_init.sql`).
  *
- * This module is loaded ONLY when VITE_SUPABASE_URL and
- * VITE_SUPABASE_ANON_KEY are configured. The anon key is safe for the
- * browser (RLS scopes every row to the signed-in user). A service_role key
- * must NEVER appear in frontend code or env vars.
+ * Privacy & security rules:
+ *  - The user id is ALWAYS taken from the authenticated session
+ *    (server-verified JWT). It is never accepted from call parameters, so the
+ *    frontend cannot read or write another user's rows even by tampering.
+ *  - RLS re-checks ownership on every statement server-side.
+ *  - This module is loaded ONLY when VITE_SUPABASE_URL and
+ *    VITE_SUPABASE_ANON_KEY are configured. The anon key is safe for the
+ *    browser. A service_role key must NEVER appear anywhere in frontend code.
+ *  - Cloud mode never fabricates financial records: `loadSampleData` refuses
+ *    to run so demo data can never enter a real user's account.
  */
 
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type {
   Account,
   AppData,
@@ -24,9 +30,9 @@ import {
   validateTransactionInput,
   roundMoney,
 } from '../lib/validation';
-import { sampleAppData } from './sampleData';
 import type { FinanceRepository } from './repository';
 import { AuthRequiredError, ValidationError } from './errors';
+import { getSupabaseClient } from './supabaseClient';
 
 interface DbTransaction {
   id: string;
@@ -98,39 +104,22 @@ export class SupabaseFinanceRepository implements FinanceRepository {
   private user: User | null = null;
 
   constructor() {
-    this.client = createClient(
-      import.meta.env.VITE_SUPABASE_URL as string,
-      import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-    );
+    this.client = getSupabaseClient();
   }
 
-  /** Call once at startup: resolves the session, or asks the user to sign in. */
-  async ensureSession(): Promise<User> {
+  /**
+   * Resolve the CURRENT session user. Every query is scoped to this id, and
+   * RLS enforces the same scope again on the server. Throws when no session
+   * exists — there is no way to operate on behalf of someone else.
+   */
+  private async requireUser(): Promise<User> {
+    if (this.user) return this.user;
     const { data } = await this.client.auth.getSession();
     if (data.session?.user) {
       this.user = data.session.user;
       return data.session.user;
     }
-    throw new AuthRequiredError();
-  }
-
-  /** Email + password sign-in (Supabase auth). */
-  async signIn(email: string, password: string): Promise<void> {
-    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
-    this.user = data.user;
-  }
-
-  /** Email + password sign-up (Supabase auth). */
-  async signUp(email: string, password: string): Promise<void> {
-    const { data, error } = await this.client.auth.signUp({ email, password });
-    if (error) throw new Error(error.message);
-    this.user = data.user ?? null;
-  }
-
-  private async requireUser(): Promise<User> {
-    if (this.user) return this.user;
-    return this.ensureSession();
+    throw new AuthRequiredError('Sign in to access your financial data.');
   }
 
   private async fetchAccount(userId: string): Promise<Account> {
@@ -200,7 +189,8 @@ export class SupabaseFinanceRepository implements FinanceRepository {
       .from('accounts')
       .update({
         opening_balance: value,
-        // `opening_balance_set_at` is set only if still null (initialized once).
+        // `opening_balance_set_at` is written only if still null, so the
+        // one-time initialization can never be duplicated by later edits.
         opening_balance_set_at: account.openingBalanceSetAt ?? new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -246,7 +236,10 @@ export class SupabaseFinanceRepository implements FinanceRepository {
     if (fetchError) throw new Error(fetchError.message);
     if (!existing) throw new Error('Transaction not found.');
 
-    const clean = sanitizeTransactionInput({ ...mapTransaction(existing as DbTransaction), ...patch });
+    const clean = sanitizeTransactionInput({
+      ...mapTransaction(existing as DbTransaction),
+      ...patch,
+    });
     const result = validateTransactionInput(clean);
     if (!result.valid) throw new ValidationError(result.errors);
 
@@ -301,13 +294,6 @@ export class SupabaseFinanceRepository implements FinanceRepository {
 
   async updateGoal(id: string, patch: Partial<GoalInput>): Promise<FinancialGoal> {
     const user = await this.requireUser();
-    const clean = sanitizeGoalInput(patch);
-    const partial = sanitizeGoalInput({
-      name: patch.name,
-      targetAmount: patch.targetAmount,
-      deadline: patch.deadline,
-    });
-    // Validate only the fields being changed by merging with a fetch.
     const { data: existing, error: fetchError } = await this.client
       .from('financial_goals')
       .select('*')
@@ -316,10 +302,10 @@ export class SupabaseFinanceRepository implements FinanceRepository {
       .maybeSingle();
     if (fetchError) throw new Error(fetchError.message);
     if (!existing) throw new Error('Goal not found.');
-    const merged = sanitizeGoalInput({ ...mapGoal(existing as DbGoal), ...partial });
+
+    const merged = sanitizeGoalInput({ ...mapGoal(existing as DbGoal), ...patch });
     const result = validateGoalInput(merged);
     if (!result.valid) throw new ValidationError(result.errors);
-    void clean;
 
     const { data, error } = await this.client
       .from('financial_goals')
@@ -348,40 +334,11 @@ export class SupabaseFinanceRepository implements FinanceRepository {
   }
 
   async loadSampleData(): Promise<AppData> {
-    const user = await this.requireUser();
-    const account = await this.fetchAccount(user.id);
-    const sample = sampleAppData();
-    const now = new Date().toISOString();
-
-    const { error: txError } = await this.client.from('transactions').insert(
-      sample.transactions.map((t) => ({
-        user_id: user.id,
-        account_id: account.id,
-        type: t.type,
-        amount: t.amount,
-        category: t.category,
-        date: t.date,
-        description: t.description || null,
-      })),
+    // Hard refusal: demo/sample records must never enter a real user's
+    // account. Sample data exists only in local demo mode.
+    throw new Error(
+      'Sample data is only available in Local Demo Mode. Cloud accounts stay free of fabricated records.',
     );
-    if (txError) throw new Error(txError.message);
-
-    const { error: goalError } = await this.client.from('financial_goals').insert(
-      sample.goals.map((g) => ({
-        user_id: user.id,
-        account_id: account.id,
-        name: g.name,
-        target_amount: g.targetAmount,
-        deadline: g.deadline,
-      })),
-    );
-    if (goalError) throw new Error(goalError.message);
-
-    if (account.openingBalanceSetAt === null) {
-      await this.setOpeningBalance(sample.account.openingBalance);
-    }
-    void now;
-    return this.load();
   }
 
   async resetAll(): Promise<AppData> {

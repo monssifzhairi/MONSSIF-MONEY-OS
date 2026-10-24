@@ -185,3 +185,70 @@ export const IconLock = (p: IconProps) => (
     <path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Svg>
 );
+
+export const IconEye = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" />
+    <circle cx="12" cy="12" r="2.8" />
+  </Svg>
+);
+
+export const IconEyeOff = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.8" />
+    <path d="M6.2 6.4C3.5 8.1 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1" />
+    <path d="M9.9 9.9a2.8 2.8 0 0 0 4 4" />
+  </Svg>
+);
+
+export const IconChevronDown = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </Svg>
+);
+
+export const IconLogOut = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />
+    <path d="m16 17 5-5-5-5" />
+    <path d="M21 12H9" />
+  </Svg>
+);
+
+export const IconUser = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+  </Svg>
+);
+
+export const IconMail = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </Svg>
+);
+
+export const IconShield = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </Svg>
+);
+
+export const IconArrowRight = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 12h14" />
+    <path d="m13 6 6 6-6 6" />
+  </Svg>
+);
+
+export const IconKey = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4.5" />
+    <path d="m11.5 11.5 8-8" />
+    <path d="m17 6 2.5 2.5" />
+    <path d="m14.5 8.5 2.5 2.5" />
+  </Svg>
+);

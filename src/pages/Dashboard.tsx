@@ -1,4 +1,10 @@
-/** Dashboard: balance, income/expense totals, goal progress, chart, recent activity. */
+/**
+ * Dashboard — premium financial overview.
+ *
+ * Every figure is derived from the authoritative ledger:
+ *   balance = opening balance + recorded income − recorded expenses.
+ * Hypothetical income is never counted anywhere.
+ */
 
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -10,10 +16,11 @@ import {
   goalProgress,
   monthlySeries,
 } from '../lib/calculations';
-import { formatMAD, formatMonthKey } from '../lib/format';
+import { formatMAD, formatMADNumber, formatMonthKey, todayISO } from '../lib/format';
 import { PageHeader } from '../components/layout/AppShell';
 import { MonthlyFlowChart } from '../components/charts/Charts';
-import { Button, EmptyState, ProgressBar, useToast } from '../components/ui';
+import { GoalRing } from '../components/charts/GoalRing';
+import { Button, EmptyState, useToast } from '../components/ui';
 import {
   IconCalendar,
   IconPlus,
@@ -25,7 +32,7 @@ import { TransactionTable } from '../components/transactions/TransactionTable';
 import { TransactionForm } from '../components/transactions/TransactionForm';
 
 export function Dashboard() {
-  const { data, addTransaction, deleteTransaction, ready } = useFinance();
+  const { data, addTransaction, deleteTransaction, ready, mode } = useFinance();
   const navigate = useNavigate();
   const toast = useToast();
   const [formOpen, setFormOpen] = useState(false);
@@ -38,29 +45,28 @@ export function Dashboard() {
   const series = useMemo(() => monthlySeries(data.transactions, 6), [data.transactions]);
   const primaryGoal = data.goals[0] ?? null;
   const progress = useMemo(
-    () => (primaryGoal ? goalProgress(primaryGoal, balance) : null),
+    () => (primaryGoal ? goalProgress(primaryGoal, balance, todayISO()) : null),
     [primaryGoal, balance],
   );
   const currentMonth = series[series.length - 1];
   const topCategories = useMemo(
-    () => categoryBreakdown(data.transactions, 'expense').slice(0, 3),
+    () => categoryBreakdown(data.transactions, 'expense').slice(0, 4),
     [data.transactions],
   );
 
   if (!ready) {
-    return (
-      <div className="center-screen">
-        <div className="spinner" />
-        <span>Loading your money…</span>
-      </div>
-    );
+    return null; // skeleton is rendered by the protected layout
   }
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Your money at a glance — recorded data only."
+        subtitle={
+          mode === 'supabase'
+            ? 'Your private ledger — stored securely in your Supabase project.'
+            : 'Local demo ledger — browser-only, nothing leaves this device.'
+        }
         actions={
           <Button variant="primary" onClick={() => setFormOpen(true)}>
             <IconPlus size={15} />
@@ -69,35 +75,136 @@ export function Dashboard() {
         }
       />
 
+      {/* ── Hero: balance + goal ring ───────────────────────────────────── */}
+      <section className="hero-card" aria-label="Financial overview">
+        <div className="hero-grid">
+          <div>
+            <div className="hero-eyebrow">
+              <IconWallet size={14} className="text-accent" />
+              <span className="eyebrow">Current balance</span>
+            </div>
+            <div className="hero-balance">
+              {formatMADNumber(balance)}{' '}
+              <span className="unit">MAD</span>
+            </div>
+            <p className="hero-sub">
+              Opening {formatMAD(data.account.openingBalance)} · recorded activity{' '}
+              {totals.netSavings >= 0 ? '+' : '−'}
+              {formatMAD(Math.abs(totals.netSavings)).replace(' MAD', '')} MAD
+            </p>
+
+            <div className="hero-chips">
+              <span className="hero-chip">
+                <IconTrendUp size={14} className="text-income" />
+                Income <strong>{formatMAD(totals.totalIncome)}</strong>
+              </span>
+              <span className="hero-chip">
+                <IconTrendDown size={14} className="text-expense" />
+                Expenses <strong>{formatMAD(totals.totalExpense)}</strong>
+              </span>
+              <span className="hero-chip">
+                Net savings{' '}
+                <strong className={totals.netSavings >= 0 ? 'text-income' : 'text-expense'}>
+                  {formatMAD(totals.netSavings)}
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="goal-ring-wrap">
+            {progress ? (
+              <>
+                <GoalRing percent={progress.percent} />
+                <div className="goal-ring-caption">
+                  <strong className="text-sm">{progress.goal.name}</strong>
+                  <br />
+                  {progress.remaining > 0 ? (
+                    <>
+                      {formatMAD(progress.remaining)} to go ·{' '}
+                      {progress.overdue
+                        ? 'deadline passed'
+                        : `${progress.daysLeft} days left`}
+                    </>
+                  ) : (
+                    <span className="text-income">Target reached — fully funded</span>
+                  )}
+                  <br />
+                  <span className="text-dim text-xs">
+                    Measured on real balance only. Future income is never counted.
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="goal-ring-caption" style={{ maxWidth: 240 }}>
+                <div className="empty-icon" style={{ margin: '0 auto 10px' }}>
+                  <IconCalendar size={18} />
+                </div>
+                <strong className="text-sm">No savings goal yet</strong>
+                <br />
+                <span className="text-dim text-xs">
+                  Create your first target — e.g. 1,000 MAD — and track it here.
+                </span>
+                <div style={{ marginTop: 12 }}>
+                  <Button size="sm" variant="secondary" onClick={() => navigate('/goals')}>
+                    Create goal
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stat tiles ─────────────────────────────────────────────────── */}
       <div className="stat-grid">
         <div className="stat-card">
-          <span className="stat-label">Current balance</span>
-          <span className={`stat-value${balance >= 0 ? ' accent' : ' expense'}`}>
-            {formatMAD(balance)}
-          </span>
-          <span className="stat-meta">
-            Opening {formatMAD(data.account.openingBalance)} + recorded activity
-          </span>
+          <div className="stat-head">
+            <span className="stat-label">Opening balance</span>
+            <span className="stat-icon">
+              <IconWallet size={14} />
+            </span>
+          </div>
+          <span className="stat-value tnum">{formatMAD(data.account.openingBalance)}</span>
+          <span className="stat-meta">Set once · never duplicated</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Total income</span>
-          <span className="stat-value income">{formatMAD(totals.totalIncome)}</span>
+          <div className="stat-head">
+            <span className="stat-label">Total income</span>
+            <span className="stat-icon income">
+              <IconTrendUp size={14} />
+            </span>
+          </div>
+          <span className="stat-value income tnum">{formatMAD(totals.totalIncome)}</span>
           <span className="stat-meta">All recorded income</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Total expenses</span>
-          <span className="stat-value expense">{formatMAD(totals.totalExpense)}</span>
+          <div className="stat-head">
+            <span className="stat-label">Total expenses</span>
+            <span className="stat-icon expense">
+              <IconTrendDown size={14} />
+            </span>
+          </div>
+          <span className="stat-value expense tnum">{formatMAD(totals.totalExpense)}</span>
           <span className="stat-meta">All recorded expenses</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Net savings</span>
-          <span className={`stat-value${totals.netSavings >= 0 ? '' : ' expense'}`}>
+          <div className="stat-head">
+            <span className="stat-label">Net savings</span>
+            <span className="stat-icon">
+              <IconCalendar size={14} />
+            </span>
+          </div>
+          <span
+            className={`stat-value tnum ${totals.netSavings >= 0 ? '' : 'expense'}`}
+            style={totals.netSavings >= 0 ? { color: 'var(--text)' } : undefined}
+          >
             {formatMAD(totals.netSavings)}
           </span>
           <span className="stat-meta">Income minus expenses</span>
         </div>
       </div>
 
+      {/* ── Chart + side column ────────────────────────────────────────── */}
       <div className="grid-2">
         <div className="card">
           <div className="card-header">
@@ -107,11 +214,11 @@ export function Dashboard() {
             </div>
             <div className="chart-legend">
               <span>
-                <span className="legend-dot" style={{ background: '#10b981' }} />
+                <span className="legend-dot" style={{ background: '#2dd4a0' }} />
                 Income
               </span>
               <span>
-                <span className="legend-dot" style={{ background: '#e06c65' }} />
+                <span className="legend-dot" style={{ background: '#ef7168' }} />
                 Expenses
               </span>
             </div>
@@ -143,55 +250,40 @@ export function Dashboard() {
         <div className="stack">
           <div className="card">
             <div className="card-header">
-              <div className="card-title">Primary goal</div>
-              <Link to="/goals" className="text-xs text-accent font-semibold">
-                Manage goals
+              <div>
+                <div className="card-title">This month</div>
+                <div className="card-hint">{formatMonthKey(currentMonth?.key ?? '')}</div>
+              </div>
+              <Link to="/reports" className="text-xs text-accent font-semibold">
+                Full report
               </Link>
             </div>
-            {progress ? (
+            {currentMonth && (currentMonth.income > 0 || currentMonth.expense > 0) ? (
               <div className="stack" style={{ gap: 12 }}>
-                <div>
-                  <div className="goal-amount-row">
-                    <span className="goal-saved">{formatMAD(progress.saved)}</span>
-                    <span className="goal-target">of {formatMAD(progress.goal.targetAmount)}</span>
-                  </div>
-                  <div className="text-xs text-dim" style={{ marginTop: 2 }}>
-                    {progress.goal.name}
-                  </div>
+                <div className="row-between">
+                  <span className="text-sm text-muted">Income</span>
+                  <strong className="text-income tnum">{formatMAD(currentMonth.income)}</strong>
                 </div>
-                <ProgressBar
-                  percent={progress.percent}
-                  label="Progress"
-                  value={`${progress.percent.toFixed(1)}%`}
-                  warning={progress.overdue}
-                />
-                <div className="goal-meta">
-                  <span className="goal-meta-item">
-                    <IconWallet size={13} />
-                    {progress.remaining > 0
-                      ? `${formatMAD(progress.remaining)} to go`
-                      : 'Target reached'}
-                  </span>
-                  <span className="goal-meta-item">
-                    <IconCalendar size={13} />
-                    {progress.overdue ? 'Deadline passed' : `${progress.daysLeft} days left`}
-                  </span>
+                <div className="divider" style={{ margin: 0 }} />
+                <div className="row-between">
+                  <span className="text-sm text-muted">Expenses</span>
+                  <strong className="text-expense tnum">{formatMAD(currentMonth.expense)}</strong>
                 </div>
-                <div className="text-xs text-dim" style={{ lineHeight: 1.6 }}>
-                  Progress uses your actual recorded balance only. Future or planned income is
-                  never counted.
+                <div className="divider" style={{ margin: 0 }} />
+                <div className="row-between">
+                  <span className="text-sm text-muted">Net</span>
+                  <strong
+                    className={`tnum ${currentMonth.net >= 0 ? 'text-income' : 'text-expense'}`}
+                  >
+                    {formatMAD(currentMonth.net)}
+                  </strong>
                 </div>
               </div>
             ) : (
-              <EmptyState
-                title="No goal yet"
-                text="Create your first savings goal — for example, 1,000 MAD."
-                action={
-                  <Button size="sm" variant="primary" onClick={() => navigate('/goals')}>
-                    Create goal
-                  </Button>
-                }
-              />
+              <p className="text-sm text-dim">
+                No activity recorded this month yet. Add your first entry to see the monthly
+                picture.
+              </p>
             )}
           </div>
 
@@ -199,7 +291,7 @@ export function Dashboard() {
             <div className="card-header">
               <div className="card-title">Top spending</div>
               <Link to="/reports" className="text-xs text-accent font-semibold">
-                Full report
+                Breakdown
               </Link>
             </div>
             {topCategories.length === 0 ? (
@@ -224,6 +316,7 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* ── Recent transactions ────────────────────────────────────────── */}
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-header">
           <div>
@@ -234,13 +327,25 @@ export function Dashboard() {
             View all
           </Link>
         </div>
-        <TransactionTable
-          transactions={data.transactions}
-          compact
-          onEdit={() => navigate('/transactions')}
-          onDelete={(tx) => deleteTransaction(tx.id)}
-          onAdd={() => setFormOpen(true)}
-        />
+        {data.transactions.length === 0 ? (
+          <EmptyState
+            title="Your ledger is empty"
+            text="Record your first income or expense — your balance and goal progress update instantly."
+            action={
+              <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
+                <IconPlus size={14} /> Add your first transaction
+              </Button>
+            }
+          />
+        ) : (
+          <TransactionTable
+            transactions={data.transactions}
+            compact
+            onEdit={() => navigate('/transactions')}
+            onDelete={(tx) => deleteTransaction(tx.id)}
+            onAdd={() => setFormOpen(true)}
+          />
+        )}
       </div>
 
       <TransactionForm

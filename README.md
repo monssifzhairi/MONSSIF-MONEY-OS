@@ -1,219 +1,197 @@
 # MONSSIF MONEY OS
 
-A real, working **personal finance system** — track money, income, expenses, savings and
-financial goals in **MAD (Moroccan dirham)**. Built as a private tool, not a dashboard mockup:
-every figure on screen is computed from your recorded data, and **hypothetical income is
-never counted as earned money**.
+A private **personal finance operating system** — track money, income, expenses, savings and
+financial goals in **MAD (Moroccan dirham)**. Real authentication via Supabase Auth, strict
+per-user data isolation with PostgreSQL Row Level Security, and a cinematic dark interface.
 
-**Design principles**
+**Money rules (non-negotiable)**
 
 - Current balance = opening balance + recorded income − recorded expenses. Nothing else.
 - The starting balance (default **300 MAD**) is stored separately from transactions and is
-  initialized **exactly once**. Changing it later goes through an explicit Settings workflow —
-  it never creates or duplicates a transaction.
-- Goal progress is measured against the **actual recorded balance**, never against planned
-  income.
-- Preserve savings first, build income second — the product language and defaults follow
-  that priority.
+  initialized **exactly once**. Later changes go through a confirmed Settings workflow and
+  never re-run initialization, re-render additions, or migrate duplicates.
+- Goal progress is measured against the **actual recorded balance** — hypothetical or
+  planned income is never counted as earned.
+- No fabricated transactions ever enter a real user's account. Sample data exists only in
+  Local Demo Mode.
 
 ---
 
-## Tech stack
+## Modes
 
-| Layer      | Choice                                        |
-| ---------- | --------------------------------------------- |
-| Frontend   | React 18 + TypeScript + Vite 5                |
-| Charts     | Recharts (restrained, dark-themed)            |
-| Storage    | **Local mode** (browser `localStorage`) or **Supabase PostgreSQL** |
-| Auth       | Supabase Auth (email + password), only in Supabase mode |
-| Tests      | Vitest + happy-dom (unit + app smoke tests)   |
-| Styling    | Hand-rolled design system CSS (no UI kit)     |
+| Mode | When | Auth | Storage | Labeling |
+| --- | --- | --- | --- | --- |
+| **Supabase cloud** | `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` set | Real email/password sign-up, sign-in, sign-out, password reset, persistent sessions | Supabase Postgres, RLS-scoped to the signed-in user | "Supabase cloud · authenticated" |
+| **Local Demo** | Supabase not configured, user explicitly opts in | None — clearly stated | Browser `localStorage` only, no sync | "Local demo · browser-only · no sync" |
+
+If Supabase is **not** configured, the app shows a setup screen explaining exactly what is
+missing — it never pretends authentication works and never silently falls back to
+localStorage while claiming cloud sync. The two modes are separated at every level (routes,
+account menu, Settings, repository layer).
 
 ---
 
-## Quick start (local mode — zero configuration)
-
-No Supabase project is required. With Node.js 18+ installed:
+## Quick start
 
 ```bash
 npm install
 npm run dev        # → http://localhost:5173
 ```
 
-On first launch you get a one-time setup screen:
-
-1. **Starting balance** — defaults to **300 MAD** (editable before you begin).
-2. **Start clean** (empty ledger) or **Explore with sample data** (16 realistic demo
-   entries around a 300 MAD start, plus a "First 1,000 MAD" goal). Sample data is always an
-   explicit choice and can be re-loaded or wiped from **Settings**.
-
-Data lives in your browser (`localStorage`, key `monssif-money-os:v1`) and survives reloads.
-The app clearly labels this as **Local mode** in the sidebar — it never pretends a database
-is connected when it is not.
+- **Without env vars** you get the setup screen: follow the Supabase steps (below) or click
+  **“Continue in Local Demo Mode”** to explore with browser-only storage (first-run setup
+  offers a clean ledger or a clearly-labeled sample dataset).
+- **With env vars set** you get the real authentication screens and cloud storage.
 
 ### Scripts
 
-| Command             | What it does                                      |
-| ------------------- | ------------------------------------------------- |
-| `npm run dev`       | Start the development server                      |
-| `npm run build`     | Type-check + production build into `dist/`        |
-| `npm run preview`   | Serve the production build                        |
-| `npm test`          | Run the full test suite once                      |
-| `npm run test:watch`| Run tests in watch mode                           |
-| `npm run typecheck` | TypeScript only                                   |
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Strict type-check + production build into `dist/` |
+| `npm run preview` | Serve the production build |
+| `npm test` | Full test suite (88 tests) |
+| `npm run test:watch` | Tests in watch mode |
+| `npm run typecheck` | TypeScript only |
+
+---
+
+## Supabase setup
+
+Everything needed is included; a **free** Supabase project is enough.
+
+1. **Create a project** at [supabase.com](https://supabase.com).
+2. **Run the migration**: open the SQL editor and execute
+   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+   It creates `profiles`, `accounts`, `transactions`, `financial_goals` with UUID keys,
+   FKs, checks, indexes, `updated_at` triggers, an auto-profile signup trigger, and **RLS
+   with per-user SELECT/INSERT/UPDATE/DELETE policies on every table** (ownership via
+   `auth.uid()`, plus account-ownership checks on transaction/goal writes). The file is
+   idempotent — safe to re-run.
+3. **Auth settings** (Dashboard → Authentication):
+   - Enable **Email** provider. Turn email confirmation on or off as you prefer (the app
+     handles both flows).
+   - Add your app URL(s) to **Authentication → URL Configuration → Redirect URLs** (e.g.
+     `http://localhost:5173` and your production origin). Password-recovery emails return
+     the user to this origin so the app can show the “choose a new password” screen.
+4. **Environment variables**: copy `.env.example` → `.env` and set:
+
+   ```bash
+   VITE_SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+   VITE_SUPABASE_ANON_KEY=YOUR-PUBLISHABLE-ANON-KEY
+   ```
+
+   Use only the **anon/publishable** key. The **service-role key must never** appear in any
+   frontend file, env var, or git commit — it would be exposed in the built bundle.
+5. `npm run dev` — you now have real sign-up, sign-in, sign-out and password reset.
+
+### Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL. Empty → setup screen / Local Demo Mode. |
+| `VITE_SUPABASE_ANON_KEY` | Public anon key. Empty → setup screen / Local Demo Mode. |
+
+---
+
+## Authentication (what is real)
+
+- **Sign-up** (email + password, min 8 chars, confirmation field) via `supabase.auth.signUp`.
+- **Sign-in / sign-out** via `signInWithPassword` / `signOut`.
+- **Password reset**: `resetPasswordForEmail` sends a recovery link; opening it fires the
+  `PASSWORD_RECOVERY` event and the app routes to a “choose a new password” screen backed by
+  `auth.updateUser({ password })`.
+- **Persistent sessions**: `persistSession` + `autoRefreshToken` (Supabase Auth stores and
+  refreshes the session securely — no custom token code).
+- **Protected routes**: unauthenticated visitors are redirected to `/auth/login`;
+  authenticated users are redirected away from login/register pages.
+- **Passwords are never stored or hashed by this app** — they go straight to Supabase Auth.
+  No plaintext passwords, no hand-rolled hashing, no service-role keys on the client.
+
+---
+
+## Financial data privacy
+
+- RLS is enabled on all four tables; every policy enforces `auth.uid() = user_id`, and
+  insert/update policies additionally require the referenced account to belong to the user.
+- The repository binds rows to the **session user id** (server-verified JWT) — never to a
+  client-supplied value.
+- `tests/security-policies.test.ts` statically audits the shipped migration for these
+  guarantees; `tests/auth.test.tsx` covers the app-side assumptions with a mocked client.
+- Live RLS enforcement should additionally be spot-checked on a real project (see below).
 
 ---
 
 ## Features
 
-### Dashboard
-- Current balance computed from the opening balance and all recorded transactions.
-- Total income, total expenses, net savings cards.
-- Progress toward your primary savings goal (e.g. **1,000 MAD**), with "to go" and days left.
-- Income-vs-expense bar chart (last 6 months).
-- Top spending categories and recent transactions.
+**Dashboard** — current balance from real entries only, income/expenses/net savings, a
+distinctive goal ring toward your target (e.g. 1,000 MAD) with days-left and remaining,
+premium income-vs-expense chart, this-month summary, top spending, recent transactions.
 
-### Transactions
-- Add / edit / delete income and expense entries: **amount, type, category, date, description**.
-- Client-side validation (positive amounts, ≤ 2 decimals, required fields, category matches
-  type, ISO dates, description length) — the Supabase schema enforces the same rules again
-  at the database level.
-- Filter by type, category, date range, and free-text search.
-- Deletion always asks for confirmation.
-- Toasts for success/failure; empty, loading and error states everywhere.
+**Transactions** — add/edit/delete with strict validation (positive amounts ≤ 2 decimals,
+required fields, category-per-type, ISO dates), filters (type, category, date range,
+search), delete confirmation, CSV export.
 
-### Financial goals
-- Create/edit goals with **name, target amount, deadline** (duplicate names rejected).
-- Progress = your real recorded balance capped at the target — with a visible note that
-  future income is never counted.
-- Overdue / completed badges, remaining amount, days left.
+**Goals** — targets + deadlines, progress from the actual balance (capped at target),
+overdue/completed states, duplicate-name protection.
 
-### Reports
-- Monthly summaries table (income, expenses, net per month).
-- Income and expense category breakdowns (donut charts).
-- Per-month transaction history.
-- **CSV export** (RFC-4180 escaping, works in Excel/Numbers/Sheets).
+**Reports** — monthly summaries, category donuts, per-month history, CSV export.
 
-### Settings
-- **Change starting balance** workflow (explicit, confirmed, never re-initializes).
-- Export all transactions to CSV.
-- Load sample data / reset everything (both behind confirmation dialogs).
-- Storage-mode panel explaining exactly where data lives.
+**Settings** — one-time starting-balance workflow, account panel (change password, sign-out,
+recovery email), data export/reset (sample data only in Local Demo Mode), honest storage &
+privacy panel.
 
----
-
-## Environment variables
-
-Copy `.env.example` to `.env` and fill in values as needed. **Never commit `.env`.**
-
-| Variable                  | Required for        | Notes |
-| ------------------------- | ------------------- | ----- |
-| `VITE_SUPABASE_URL`       | Supabase mode       | Project URL (Settings → API in Supabase). Leave empty for local mode. |
-| `VITE_SUPABASE_ANON_KEY`  | Supabase mode       | The **anon/public** key only. **Never** put a `service_role` key in a frontend env var — it would be exposed in the built bundle. |
-| `VITE_SEED_SAMPLE_DATA`   | optional            | Reserved flag; sample data is normally loaded from the setup screen or Settings. |
-
-Supabase mode activates **only** when both variables are present and well-formed. Otherwise
-the app runs in documented local mode. Nothing is faked either way — the sidebar and
-Settings always show the true storage mode.
-
----
-
-## Connecting the real database (Supabase) later
-
-Everything needed is included; you only need a free Supabase project.
-
-1. Create a project at [supabase.com](https://supabase.com) (free tier is enough).
-2. Open the **SQL editor** and run the migration file
-   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-   It creates:
-   - `profiles` — one row per auth user.
-   - `accounts` — the opening balance (stored **separately** from transactions; a unique
-     index on `user_id` makes one-time initialization enforceable).
-   - `transactions` — type/amount/category/date/description with check constraints,
-     foreign keys and indexes (`user_id + date`, `user_id + category`, `user_id + type`).
-   - `financial_goals` — name, target amount, deadline.
-   - `updated_at` triggers and an auth-signup trigger that auto-creates `profiles` rows.
-   - **Row Level Security** on every table: authenticated users can only read/write their
-     own rows. No table is public.
-3. In `supabase` Auth settings, configure who can sign up (email confirmation is supported —
-   the app handles both flows).
-4. Copy `.env.example` → `.env` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-5. `npm run dev` — the app now shows **Supabase connected** and presents the sign-in screen
-   (email + password) before first use.
-
-The repository layer (`src/data/repository.ts`) is the seam between UI and storage:
-`LocalFinanceRepository` and `SupabaseFinanceRepository` implement the same interface, so
-both modes run identical validation and calculations.
-
-### Security notes
-- RLS is enabled on all four tables; policies scope every statement to `auth.uid() = user_id`.
-- Only the anon key reaches the browser. The service-role key must never appear in frontend
-  code, env vars, or the repository.
-- No credentials or `.env` files are committed (`.gitignore` enforces this).
-- Inputs are validated on the client *and* constrained again in the database schema.
+**Design** — cinematic near-black background with atmospheric light pools, deep graphite
+cards, restrained emerald accents, Inter Variable + Instrument Serif typography, split-screen
+auth experience with an animated SVG balance curve, responsive desktop/tablet/mobile layouts,
+keyboard-accessible dialogs and focus rings, `prefers-reduced-motion` support, loading
+skeletons and polished empty/success/error states.
 
 ---
 
 ## How the numbers are computed
 
-| Concept        | Formula |
-| -------------- | ------- |
+| Concept | Formula |
+| --- | --- |
 | Current balance | `opening_balance + Σ income − Σ expenses` |
-| Net savings     | `Σ income − Σ expenses` |
-| Monthly chart   | bucketed by transaction date (`YYYY-MM`), continuous 6-month axis |
-| Goal progress   | `min(current balance, target) / target` — recorded money only |
+| Net savings | `Σ income − Σ expenses` |
+| Monthly chart | bucketed by transaction date (`YYYY-MM`), continuous 6-month axis |
+| Goal progress | `min(current balance, target) / target` — recorded money only |
 
-All money math rounds to 2 decimals (centimes) via a shared `roundMoney` helper; floating
-point sums are re-rounded at every step (covered by tests).
-
----
-
-## Data model (mirrors the Supabase schema)
-
-```
-profiles (id → auth.users, email, full_name)
-accounts (id, user_id, name, currency='MAD', opening_balance, opening_balance_set_at)
-   └── transactions (id, user_id, account_id, type, amount, category, date, description)
-   └── financial_goals (id, user_id, account_id, name, target_amount, deadline)
-```
-
-UUID primary keys, `timestamptz` audit columns, FK cascade deletes, check constraints on
-amounts/types/dates, and per-user indexes for the filter queries.
+All money math rounds to 2 decimals (centimes) via a shared `roundMoney` helper; formatting
+is identical everywhere (MAD, 2 decimals, thousands separators).
 
 ---
 
-## Testing & verification results
+## Testing & verification (automated)
 
-`npm test` runs **59 tests** (Vitest + happy-dom), all passing at the time of writing:
+`npm test` → **88 tests passing**; `npm run build` → clean strict-TS production build.
 
-- `tests/calculations.test.ts` — totals, balance (300 MAD opening scenario), monthly series,
-  category breakdowns, goal progress (30 % of 1,000 MAD, capping, overdue, negative balance).
-- `tests/validation.test.ts` — amount/date/type/category rules, sanitization, duplicate
-  goal names, money rounding.
-- `tests/localRepository.test.ts` — one-time opening-balance initialization, CRUD with
-  validation, persistence across reloads, sample data never re-initializing the opening
-  balance, full reset.
-- `tests/csv.test.ts` — CSV generation and escaping.
-- `tests/app.smoke.test.tsx` — boots the real `<App/>`, drives first-time setup (clean and
-  sample), verifies rendered balances (e.g. sample data → **1,420.00 MAD** = 300 + 1,590 −
-  470), adds invalid and valid transactions, confirms balance recalculation after add/delete.
+| Suite | Covers |
+| --- | --- |
+| `tests/calculations.test.ts` | Totals, balance (300 MAD opening), monthly series, breakdowns, goal progress |
+| `tests/validation.test.ts` | Amount/date/type/category rules, sanitization, rounding |
+| `tests/localRepository.test.ts` | One-time opening balance, CRUD, persistence, reset |
+| `tests/csv.test.ts` | CSV generation/escaping |
+| `tests/app.smoke.test.tsx` | Real `<App/>` flows: honest setup screen → Local Demo Mode → first-run setup (300 MAD) → dashboard figures → add/delete/recalculate |
+| `tests/auth.test.tsx` | **Mocked Supabase**: protected-route redirects, session persistence, sign-in/up/out, password reset + recovery routing, humanized errors, session-derived user ids, no fabricated cloud data, one-time opening balance |
+| `tests/security-policies.test.ts` | Static audit of the SQL migration: RLS on every table, full CRUD ownership policies, `auth.uid()` everywhere, account-ownership checks, no secrets |
 
-`npm run build` performs `tsc --noEmit` (strict) + Vite production build — clean, with
-vendor code split into separate chunks (the Supabase adapter loads only when configured).
+**Not covered by automation (needs real credentials / manual verification):**
+
+- Live Supabase Auth flows (real emails, deliverability, confirm/recovery links).
+- Live RLS enforcement against Postgres (verify in the Supabase SQL editor that a user
+  cannot `select` another user's rows).
+- Visual review of the redesign in a real browser (the preview build is provided for this).
 
 ---
 
 ## Deployment (free static hosting)
 
-The build output in `dist/` is a static site — deploy anywhere free:
-
-**Netlify** — build command `npm run build`, publish directory `dist`.
-**Vercel** — framework preset "Vite", output `dist`.
-**GitHub Pages** — build and push `dist/` (the app uses `HashRouter`, so no server-side
-rewrite rules are needed).
-
-Set `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` as build-time environment variables in
-the host's dashboard if you deploy in Supabase mode.
+`dist/` is a static site. Deploy to Netlify (`npm run build`, publish `dist/`), Vercel
+(preset “Vite”), or GitHub Pages (the app uses `HashRouter` — no rewrite rules needed). Set
+the two `VITE_` variables as build-time env vars in the host dashboard, and add the deployed
+origin to Supabase Auth **Redirect URLs**.
 
 ---
 
@@ -221,48 +199,44 @@ the host's dashboard if you deploy in Supabase mode.
 
 ```
 src/
-├── main.tsx                 # entry
-├── App.tsx                  # providers, routing, setup/auth gate
-├── index.css                # design system (near-black / charcoal / emerald)
-├── types/finance.ts         # domain types (mirror the SQL schema)
-├── lib/
-│   ├── calculations.ts      # pure money math (fully unit-tested)
-│   ├── validation.ts        # shared client/server-side input rules
-│   ├── format.ts            # MAD formatting, ISO date helpers
-│   ├── csv.ts               # CSV export + download
-│   └── id.ts                # UUID v4
+├── main.tsx                  # entry (fonts + app)
+├── App.tsx                   # providers, protected routing, auth gates
+├── index.css                 # premium design system
+├── auth/AuthContext.tsx      # auth state machine (Supabase Auth + demo mode)
+├── types/finance.ts          # domain types (mirror the SQL schema)
+├── lib/                      # calculations, validation, format, csv, ids
 ├── data/
-│   ├── repository.ts        # storage interface + mode detection
-│   ├── localRepository.ts   # localStorage implementation
-│   ├── supabaseRepository.ts# Supabase implementation (RLS-aware)
-│   ├── sampleData.ts        # explicit sample dataset (300 MAD anchor)
-│   ├── store.tsx            # React context + typed actions
-│   └── errors.ts            # shared error types
+│   ├── repository.ts         # storage interface + mode detection
+│   ├── localRepository.ts    # Local Demo Mode (localStorage)
+│   ├── supabaseRepository.ts # cloud store (session-derived user ids, RLS)
+│   ├── supabaseClient.ts     # single anon-key client
+│   └── store.tsx             # finance state (bound to auth state)
 ├── components/
-│   ├── layout/AppShell.tsx  # sidebar + mobile nav
-│   ├── ui/                  # buttons, modal, toasts, empty states, icons
-│   ├── charts/              # Recharts wrappers (bar + donut)
-│   ├── transactions/        # form, table, filters
-│   └── SupabaseSignIn.tsx   # auth screen (Supabase mode only)
-└── pages/                   # Dashboard, Transactions, Goals, Reports, Settings, Setup
-supabase/migrations/
-└── 0001_init.sql            # schema + indexes + RLS + triggers
-tests/                       # Vitest unit + smoke tests
+│   ├── auth/                 # split-screen shell + animated SVG visual
+│   ├── layout/AppShell.tsx   # sidebar, account menu, mobile nav
+│   ├── ui/                   # buttons, modal, menu, password field, skeletons, icons
+│   ├── charts/               # bar/donut charts + goal ring
+│   └── transactions/         # form, table, filters
+└── pages/
+    ├── auth/                 # Login, Register, ForgotPassword, UpdatePassword
+    ├── Welcome.tsx           # “Supabase not configured” setup screen
+    ├── Setup.tsx             # one-time starting balance
+    └── Dashboard/Transactions/Goals/Reports/Settings
+supabase/migrations/0001_init.sql   # schema + indexes + RLS + triggers
+tests/                                # 88 automated tests
 ```
 
 ---
 
 ## Status summary
 
-**Works out of the box (local mode)** — full setup flow with the 300 MAD starting balance,
-transactions CRUD with validation and filtering, goals with real progress, dashboard charts,
-monthly/category reports, CSV export, one-time initialization and Settings workflows,
-59 passing tests, clean strict-TS production build.
+**Implemented & verified (automated)** — full auth flow UI and state machine (sign-up,
+sign-in, sign-out, password reset, persistent sessions, protected routes), per-user data
+isolation architecture (session-derived ids + RLS migration with complete CRUD ownership
+policies), one-time 300 MAD opening-balance semantics preserved, complete finance feature
+set, premium redesign, 88 passing tests, clean production build.
 
-**Requires configuration** — Supabase persistence and authentication: create a free
-project, run the included migration, fill the two env vars. Schema, RLS policies, the
-repository adapter and the sign-in screen are already implemented; no data is invented and
-the app never claims a database connection it does not have.
+**Requires real Supabase credentials (manual verification)** — live auth emails and links,
+live RLS enforcement, and a human visual pass over the redesign.
 
-**Out of scope (intentionally)** — bank integrations, paid services, multi-currency,
-risk-taking features. Budget for this project: 0 MAD.
+**Out of scope** — bank integrations, paid services, multi-currency. Budget: 0 MAD.

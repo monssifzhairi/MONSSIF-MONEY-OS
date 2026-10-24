@@ -8,7 +8,13 @@
 --  * The opening balance lives on `accounts` — never as a transaction row —
 --    so it can be initialized exactly once and edited only via Settings.
 --  * Row Level Security on every table: a signed-in user can only read or
---    write their own rows. No table is public.
+--    write their own rows. No table is public. SELECT, INSERT, UPDATE and
+--    DELETE policies all enforce `auth.uid() = user_id`; INSERT/UPDATE
+--    additionally require the referenced account to belong to the same user.
+--  * User identity comes from the server-verified JWT (`auth.uid()`), never
+--    from client-supplied values.
+--  * This file is idempotent (IF EXISTS / IF NOT EXISTS / CREATE OR REPLACE)
+--    and supersedes earlier drafts — run it as-is on a fresh project.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 create extension if not exists "pgcrypto";
@@ -131,12 +137,20 @@ alter table public.accounts        enable row level security;
 alter table public.transactions    enable row level security;
 alter table public.financial_goals enable row level security;
 
--- profiles: a user sees and edits only their own row.
+-- profiles: a user sees and edits only their own row. (The signup trigger
+-- creates the row with SECURITY DEFINER; the insert policy below keeps the
+-- CRUD matrix complete and ownership-checked.)
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
   on public.profiles for select
   to authenticated
   using (auth.uid() = id);
+
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own"
+  on public.profiles for insert
+  to authenticated
+  with check (auth.uid() = id);
 
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
@@ -144,6 +158,12 @@ create policy "profiles_update_own"
   to authenticated
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+drop policy if exists "profiles_delete_own" on public.profiles;
+create policy "profiles_delete_own"
+  on public.profiles for delete
+  to authenticated
+  using (auth.uid() = id);
 
 -- accounts
 drop policy if exists "accounts_select_own" on public.accounts;
@@ -195,7 +215,15 @@ create policy "transactions_update_own"
   on public.transactions for update
   to authenticated
   using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (
+    -- Ownership AND the target account must belong to the same user, so a
+    -- row can never be moved onto someone else's account.
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.accounts a
+      where a.id = account_id and a.user_id = auth.uid()
+    )
+  );
 
 drop policy if exists "transactions_delete_own" on public.transactions;
 create policy "transactions_delete_own"
@@ -227,7 +255,13 @@ create policy "financial_goals_update_own"
   on public.financial_goals for update
   to authenticated
   using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.accounts a
+      where a.id = account_id and a.user_id = auth.uid()
+    )
+  );
 
 drop policy if exists "financial_goals_delete_own" on public.financial_goals;
 create policy "financial_goals_delete_own"

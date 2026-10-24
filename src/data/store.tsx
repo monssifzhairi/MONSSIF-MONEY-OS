@@ -1,6 +1,13 @@
 /**
- * Global finance state. A single provider owns the repository instance,
- * keeps an in-memory copy of AppData, and exposes typed actions to the UI.
+ * Global finance state. Owns the repository instance for the current mode
+ * (local demo or authenticated Supabase), keeps an in-memory copy of AppData,
+ * and exposes typed actions to the UI.
+ *
+ * The repository is chosen from the AUTH state:
+ *  - `local-demo`    → LocalFinanceRepository (browser-only)
+ *  - `authenticated` → SupabaseFinanceRepository (session-scoped, RLS)
+ *  - anything else   → no repository; protected pages are unreachable.
+ * Data is cleared whenever the authenticated user changes (e.g. sign-out).
  */
 
 import {
@@ -21,18 +28,16 @@ import type {
   Transaction,
   TransactionInput,
 } from '../types/finance';
-import { createRepository, isAuthProvider, type FinanceRepository } from './repository';
-import { AuthRequiredError, ValidationError } from './errors';
+import type { FinanceRepository } from './repository';
+import { LocalFinanceRepository } from './localRepository';
+import { ValidationError } from './errors';
+import { useAuth } from '../auth/AuthContext';
 
 export interface FinanceContextValue {
   ready: boolean;
   error: string | null;
   mode: StorageMode;
   data: AppData;
-  /** True when Supabase is configured but nobody is signed in yet. */
-  needsAuth: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
   setOpeningBalance: (amount: number) => Promise<void>;
   addTransaction: (input: TransactionInput) => Promise<Transaction>;
   updateTransaction: (id: string, patch: Partial<TransactionInput>) => Promise<Transaction>;
@@ -73,79 +78,75 @@ function errorMessage(err: unknown): string {
 }
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
+  const { status, user } = useAuth();
   const [repo, setRepo] = useState<FinanceRepository | null>(null);
   const [data, setData] = useState<AppData>(emptyData());
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [needsAuth, setNeedsAuth] = useState(false);
 
+  // ── Repository lifecycle follows auth state ───────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const repository = await createRepository();
-        const loaded = await repository.load();
-        if (cancelled) return;
-        setRepo(repository);
-        setData(loaded);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof AuthRequiredError) {
-          const repository = await createRepository();
-          setRepo(repository);
-          setNeedsAuth(true);
-        } else {
-          setError(errorMessage(err));
-        }
-      } finally {
-        if (!cancelled) setReady(true);
+
+    async function init() {
+      if (status === 'loading') {
+        setReady(false);
+        return;
       }
-    })();
+
+      if (status === 'local-demo') {
+        const local = new LocalFinanceRepository();
+        try {
+          const loaded = await local.load();
+          if (cancelled) return;
+          setRepo(local);
+          setData(loaded);
+          setError(null);
+        } catch (err) {
+          if (!cancelled) setError(errorMessage(err));
+        } finally {
+          if (!cancelled) setReady(true);
+        }
+        return;
+      }
+
+      if (status === 'authenticated') {
+        try {
+          const { SupabaseFinanceRepository } = await import('./supabaseRepository');
+          const cloud = new SupabaseFinanceRepository();
+          const loaded = await cloud.load();
+          if (cancelled) return;
+          setRepo(cloud);
+          setData(loaded);
+          setError(null);
+        } catch (err) {
+          if (cancelled) return;
+          setRepo(null);
+          setData(emptyData());
+          setError(errorMessage(err));
+        } finally {
+          if (!cancelled) setReady(true);
+        }
+        return;
+      }
+
+      // unconfigured / anonymous → nothing loaded; clear any previous data
+      // (important on sign-out so another user cannot see it).
+      setRepo(null);
+      setData(emptyData());
+      setError(null);
+      setReady(true);
+    }
+
+    void init();
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const signIn = useCallback(
-    async (email: string, password: string) => {
-      if (!repo || !isAuthProvider(repo)) {
-        throw new Error('Sign-in is only available in Supabase mode.');
-      }
-      await repo.signIn(email, password);
-      const loaded = await repo.load();
-      setData(loaded);
-      setNeedsAuth(false);
-      setError(null);
-    },
-    [repo],
-  );
-
-  const signUp = useCallback(
-    async (email: string, password: string) => {
-      if (!repo || !isAuthProvider(repo)) {
-        throw new Error('Sign-up is only available in Supabase mode.');
-      }
-      await repo.signUp(email, password);
-      if (repo.mode === 'supabase') {
-        // Email confirmation may leave the session empty — try loading, else
-        // keep the auth screen with a friendly note.
-        try {
-          const loaded = await repo.load();
-          setData(loaded);
-          setNeedsAuth(false);
-          setError(null);
-        } catch {
-          setError('Account created. Confirm your email if required, then sign in.');
-          setNeedsAuth(true);
-        }
-      }
-    },
-    [repo],
-  );
+  }, [status, user?.id]);
 
   const guard = useCallback(
     async <T,>(fn: (r: FinanceRepository) => Promise<T>): Promise<T> => {
-      if (!repo) throw new Error('Storage is still initializing.');
+      if (!repo) throw new Error('Storage is not ready yet.');
       try {
         return await fn(repo);
       } catch (err) {
@@ -233,8 +234,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const completeSetup = useCallback(
     async (openingBalance: number, withSampleData: boolean) => {
       if (withSampleData) {
-        // Sample records first, then the user's chosen starting balance so it
-        // is initialized exactly once — sample data can never re-do it.
+        // Local demo mode only — the cloud repository refuses this so real
+        // accounts never contain fabricated transactions.
         await guard((r) => r.loadSampleData());
       }
       await guard((r) => r.setOpeningBalance(openingBalance));
@@ -247,11 +248,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       error,
-      mode: repo?.mode ?? 'local',
+      mode: repo?.mode ?? (status === 'authenticated' ? 'supabase' : 'local'),
       data,
-      needsAuth,
-      signIn,
-      signUp,
       setOpeningBalance,
       addTransaction,
       updateTransaction,
@@ -267,10 +265,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ready,
       error,
       repo,
+      status,
       data,
-      needsAuth,
-      signIn,
-      signUp,
       setOpeningBalance,
       addTransaction,
       updateTransaction,

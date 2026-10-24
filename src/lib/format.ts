@@ -12,7 +12,12 @@ const madWholeFormatter = new Intl.NumberFormat('en-MA', {
 
 /** e.g. `1 234.50 MAD` */
 export function formatMAD(amount: number): string {
-  return `${madFormatter.format(amount)} MAD`;
+  return `${formatMADNumber(amount)} MAD`;
+}
+
+/** Number part only, e.g. `1,234.50` — always the same MAD formatting. */
+export function formatMADNumber(amount: number): string {
+  return madFormatter.format(amount);
 }
 
 /** Compact form for chart axes: `1.2k`, `300` */

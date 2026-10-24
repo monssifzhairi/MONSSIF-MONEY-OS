@@ -1,69 +1,158 @@
-/** App root: providers, routing, setup gate. */
+/**
+ * App root: providers, protected routing, auth gates.
+ *
+ * Route policy
+ *  - `/auth/*` (login, register, forgot-password): anonymous users only —
+ *    authenticated users are redirected away to the dashboard.
+ *  - `/auth/update-password`: authenticated users only (recovery links and
+ *    the account menu's change-password flow).
+ *  - Everything else: protected. Unauthenticated visitors are redirected to
+ *    the login page; when Supabase is not configured, they see the setup
+ *    screen instead of any fake authentication.
+ */
 
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import { FinanceProvider, useFinance } from './data/store';
 import { ToastProvider } from './components/ui';
+import { DashboardSkeleton } from './components/ui/controls';
 import { AppShell } from './components/layout/AppShell';
-import { SupabaseSignIn } from './components/SupabaseSignIn';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
 import { Goals } from './pages/Goals';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { Setup } from './pages/Setup';
+import { Welcome } from './pages/Welcome';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { UpdatePassword } from './pages/auth/UpdatePassword';
 
-function Gate() {
-  const { ready, error, data, needsAuth } = useFinance();
-
-  if (!ready) {
-    return (
-      <div className="center-screen">
-        <div className="spinner" />
-        <span>Starting MONSSIF MONEY OS…</span>
+function Splash() {
+  return (
+    <div className="center-screen" role="status" aria-label="Loading">
+      <div className="brand-mark" style={{ width: 46, height: 46, fontSize: 22 }}>
+        M
       </div>
-    );
-  }
+      <div className="spinner" />
+      <span className="text-dim text-sm">Starting MONSSIF MONEY OS…</span>
+    </div>
+  );
+}
 
-  if (needsAuth) {
-    return <SupabaseSignIn />;
-  }
+/** Blocks pages that require an authenticated (or local-demo) session. */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { status, pendingPasswordRecovery } = useAuth();
+  const location = useLocation();
 
-  if (error && !data.settings.setupComplete) {
-    return (
-      <div className="center-screen">
-        <div className="error-banner">
-          Could not initialize storage: {error}
-        </div>
-      </div>
-    );
-  }
+  if (status === 'loading') return <Splash />;
+  if (status === 'unconfigured') return <Welcome />;
+  if (status === 'anonymous') return <Navigate to="/auth/login" replace />;
 
-  if (!data.settings.setupComplete) {
+  // A recovery link was opened — force the "choose new password" screen.
+  if (pendingPasswordRecovery && location.pathname !== '/auth/update-password') {
+    return <Navigate to="/auth/update-password" replace />;
+  }
+  return <>{children}</>;
+}
+
+/** Login / register / forgot-password: only for signed-out users. */
+function AnonymousOnly({ children }: { children: ReactNode }) {
+  const { status } = useAuth();
+  if (status === 'loading') return <Splash />;
+  if (status === 'unconfigured') return <Welcome />;
+  if (status === 'authenticated' || status === 'local-demo') {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+function ProtectedApp() {
+  const { ready, data, error } = useFinance();
+
+  // First-run: one-time starting-balance setup (full-page, focused).
+  if (ready && !data.settings.setupComplete) {
     return <Setup />;
   }
 
   return (
     <AppShell>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/goals" element={<Goals />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {!ready ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          {error ? (
+            <div className="error-banner" role="alert">
+              {error}
+            </div>
+          ) : null}
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/goals" element={<Goals />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </>
+      )}
     </AppShell>
   );
 }
 
 export default function App() {
   return (
-    <FinanceProvider>
-      <ToastProvider>
-        <HashRouter>
-          <Gate />
-        </HashRouter>
-      </ToastProvider>
-    </FinanceProvider>
+    <AuthProvider>
+      <FinanceProvider>
+        <ToastProvider>
+          <HashRouter>
+            <Routes>
+              <Route
+                path="/auth/login"
+                element={
+                  <AnonymousOnly>
+                    <Login />
+                  </AnonymousOnly>
+                }
+              />
+              <Route
+                path="/auth/register"
+                element={
+                  <AnonymousOnly>
+                    <Register />
+                  </AnonymousOnly>
+                }
+              />
+              <Route
+                path="/auth/forgot-password"
+                element={
+                  <AnonymousOnly>
+                    <ForgotPassword />
+                  </AnonymousOnly>
+                }
+              />
+              <Route
+                path="/auth/update-password"
+                element={
+                  <RequireAuth>
+                    <UpdatePassword />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/*"
+                element={
+                  <RequireAuth>
+                    <ProtectedApp />
+                  </RequireAuth>
+                }
+              />
+            </Routes>
+          </HashRouter>
+        </ToastProvider>
+      </FinanceProvider>
+    </AuthProvider>
   );
 }
