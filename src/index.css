@@ -305,6 +305,7 @@ textarea {
 
 .shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -432,9 +433,13 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  font-size: 9.5px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9px;
   font-weight: 650;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-dim);
   transition: color var(--dur-1) ease;
@@ -453,14 +458,16 @@ textarea {
   animation: content-in var(--dur-3) var(--ease) both;
 }
 
+/* Opacity-only entrance. A `transform` in these keyframes makes every user of
+   this animation a containing block for `position: fixed` descendants
+   (modals, toasts) while the fill mode keeps the animation relevant — which
+   breaks overlay positioning. */
 @keyframes content-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -962,6 +969,10 @@ textarea {
   padding: 4px;
 }
 
+.segmented.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .segmented button {
   height: 36px;
   border: none;
@@ -1006,6 +1017,7 @@ textarea {
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .panel-title {
@@ -1191,6 +1203,13 @@ textarea {
   color: var(--on-ink-dim);
 }
 
+.history-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 14px;
+}
+
 .history-chart {
   width: 100%;
   height: auto;
@@ -1314,11 +1333,12 @@ textarea {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 12px 16px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
   font-size: 13px;
   color: var(--text-muted);
+  flex-wrap: wrap;
 }
 
 .goal-side-item:last-child {
@@ -1454,6 +1474,7 @@ textarea {
 
 .table-wrap {
   overflow-x: auto;
+  min-width: 0;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
@@ -1461,6 +1482,8 @@ textarea {
 
 .table {
   width: 100%;
+  /* Readable minimum, then scroll inside .table-wrap on narrow screens. */
+  min-width: 440px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -1653,8 +1676,11 @@ textarea {
   background: rgba(12, 23, 18, 0.42);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  /* flex-start + margin:auto on the dialog keeps the top reachable when the
+     dialog is taller than the viewport (centering alone clips it). */
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
   padding: 20px;
   z-index: 100;
   animation: fade-in var(--dur-2) ease both;
@@ -1672,11 +1698,13 @@ textarea {
 .modal {
   width: 100%;
   max-width: 500px;
+  margin: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lift);
   max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
   overflow-y: auto;
   animation: modal-in var(--dur-2) var(--ease) both;
 }
@@ -1726,6 +1754,7 @@ textarea {
   justify-content: flex-end;
   gap: 10px;
   padding: 0 24px 24px;
+  flex-wrap: wrap;
 }
 
 /* ── Toasts ──────────────────────────────────────────────────────────────── */
@@ -1853,6 +1882,7 @@ textarea {
 
 .center-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1931,12 +1961,53 @@ textarea {
   margin-right: 7px;
 }
 
+/* Recharts legends must wrap on narrow panels (category donuts). */
+.recharts-legend-wrapper {
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 10px;
+}
+
+/* Long technical strings (file paths, URLs, env-var names) must be able to
+   break inside a word — `anywhere` (unlike `break-word`) shrinks min-content,
+   so no unbreakable token can force the page wider than the viewport. */
+.step-text,
+.welcome-sub,
+.welcome-title,
+.auth-form-sub,
+.auth-form-title,
+.auth-foot,
+.page-subtitle,
+.empty-text,
+.field-hint,
+.modal-desc,
+.notice-banner,
+.pace-note,
+.hero-note,
+.settings-row-text p,
+.menu-email,
+.goal-meta,
+.mono {
+  overflow-wrap: anywhere;
+}
+
 /* ── Layout helpers ──────────────────────────────────────────────────────── */
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
   gap: 18px;
+}
+
+/* Grid blowout guard: children of grid/flex rows must be allowed to shrink
+   below their min-content width, or long content widens the whole track. */
+.grid-2 > *,
+.grid-2-equal > *,
+.hero-grid > *,
+.goal-composition > * {
+  min-width: 0;
 }
 
 .grid-2-equal {
@@ -2017,6 +2088,7 @@ textarea {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .goal-saved {
@@ -2026,6 +2098,7 @@ textarea {
   letter-spacing: -0.028em;
   font-variant-numeric: tabular-nums lining-nums;
   color: var(--accent-ink-deep);
+  white-space: nowrap;
 }
 
 .goal-target {
@@ -2057,7 +2130,7 @@ textarea {
 
 .bar-row {
   display: grid;
-  grid-template-columns: 136px 1fr 100px;
+  grid-template-columns: minmax(60px, 120px) minmax(0, 1fr) minmax(0, max-content);
   align-items: center;
   gap: 12px;
   font-size: 13px;
@@ -2095,6 +2168,8 @@ textarea {
   color: var(--text);
   font-weight: 580;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Settings ────────────────────────────────────────────────────────────── */
@@ -2148,6 +2223,7 @@ textarea {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .auth-art-side {
@@ -2301,6 +2377,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   font-size: 12.5px;
   color: var(--text-dim);
 }
@@ -2353,6 +2430,7 @@ textarea {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .welcome-art-side {
@@ -2480,6 +2558,7 @@ textarea {
 
 .setup {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2551,7 +2630,8 @@ textarea {
     grid-template-columns: 1fr;
     gap: 22px;
   }
-  .grid-2 {
+  .grid-2,
+  .grid-2-equal {
     grid-template-columns: 1fr;
   }
 }
@@ -2571,8 +2651,12 @@ textarea {
   .auth-form-side,
   .welcome-main {
     align-items: flex-start;
+    /* Stack the mobile wordmark bar above the form (they must not sit side
+       by side in the default row flex container). */
+    flex-direction: column;
     padding-top: 26px;
     min-height: 100vh;
+    min-height: 100dvh;
   }
   .auth-form-wrap,
   .welcome-card {
@@ -2620,14 +2704,12 @@ textarea {
     padding: 24px 22px;
     border-radius: var(--radius-lg);
   }
-  .bar-row {
-    grid-template-columns: 100px 1fr 86px;
-  }
 }
 
 @media (max-width: 560px) {
   .hero-balance {
-    font-size: 44px;
+    /* Fluid: an 8-figure amount must fit a 320px viewport. */
+    font-size: clamp(30px, 9vw, 44px);
   }
   .hero-stats {
     flex-direction: column;
@@ -2677,9 +2759,14 @@ textarea {
     padding: 0 18px 18px;
   }
   .bar-row {
-    grid-template-columns: 84px 1fr 80px;
     gap: 8px;
     font-size: 12px;
+  }
+  .history-chart {
+    min-height: 110px;
+  }
+  .goal-saved {
+    font-size: 28px;
   }
   .filters .field {
     min-width: 132px;
@@ -2688,6 +2775,44 @@ textarea {
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (max-width: 400px) {
+  /* Long CTA labels (nowrap by default) become wrappable so no button can
+     force the page wider than the viewport. */
+  .btn {
+    white-space: normal;
+    height: auto;
+    min-height: 42px;
+    padding: 10px 14px;
+    line-height: 1.3;
+    text-align: center;
+  }
+  .btn-lg {
+    min-height: 50px;
+    padding: 12px 18px;
+  }
+  .bottom-nav-item {
+    font-size: 8.5px;
+    letter-spacing: 0.01em;
+  }
+  .activity-row {
+    gap: 10px;
+  }
+  .activity-amount {
+    font-size: 14px;
+  }
+  .goal-amount-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .goal-saved {
+    font-size: 26px;
+  }
+  .page-title {
+    font-size: 28px;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,
